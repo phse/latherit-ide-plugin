@@ -1,0 +1,54 @@
+<idea-plugin>
+    <id>app.heckit.ide.latherit</id>
+    <name>LatherIt</name>
+    <vendor url="https://heckit.app">heck\it</vendor>
+
+    <description><![CDATA[
+<p>
+  <b>LatherIt</b> is a fast, modern client for SOAP and REST services - an alternative to SoapUI,
+  right inside your IDE. Open a <code>*.latherit.yaml</code> project file and it shows up as a LatherIt editor.
+</p>
+
+<p><b>Preview:</b> the LatherIt user interface is currently available in German only.</p>
+
+<h3>Features</h3>
+<ul>
+  <li>Import WSDLs, generate sample requests, send them and inspect the response.</li>
+  <li>REST requests with query, path, matrix and header parameters.</li>
+  <li>Test suites with assertions, property transfers and scripts (JavaScript).</li>
+  <li>Mock services for SOAP and REST, running inside the IDE while the editor tab is open.</li>
+  <li>Authentication: Basic, Bearer, Digest and NTLM.</li>
+  <li>Property expansion like SoapUI (<code>${#Project#name}</code>, <code>${#Env#NAME}</code>, inline scripts).</li>
+  <li>Import SoapUI projects.</li>
+  <li>Project files are plain YAML, made for version control, and saved automatically like any other file in the IDE.</li>
+  <li>HTTPS trusts the certificates of your operating system, like your browser does.</li>
+</ul>
+
+<h3>Usage</h3>
+<ul>
+  <li><b>File | New | LatherIt Project</b> creates a project file, <b>File | New | LatherIt Project from SoapUI…</b>
+      imports a SoapUI project (<code>*-soapui-project.xml</code>).</li>
+  <li>Open any <code>*.latherit.yaml</code> file: the <b>LatherIt</b> tab shows the client, the <b>Text</b> tab the YAML.</li>
+</ul>
+
+<p><small>SoapUI is a trademark of SmartBear Software. LatherIt is not affiliated with or endorsed by SmartBear Software.</small></p>
+]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.jcef</depends>
+
+    <resource-bundle>messages.LatherItBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <fileEditorProvider implementation="app.heckit.ide.latherit.LatherItEditorProvider"/>
+    </extensions>
+
+    <actions>
+        <action id="LatherIt.NewProject" class="app.heckit.ide.latherit.NewLatherItProjectAction" icon="/icons/latherit.svg">
+            <add-to-group group-id="NewGroup" anchor="last"/>
+        </action>
+        <action id="LatherIt.ImportSoapUi" class="app.heckit.ide.latherit.ImportSoapUiProjectAction" icon="/icons/latherit.svg">
+            <add-to-group group-id="NewGroup" anchor="after" relative-to-action="LatherIt.NewProject"/>
+        </action>
+    </actions>
+</idea-plugin>

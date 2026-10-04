@@ -1,0 +1,210 @@
+# LatherIt-Projekt
+latherit: 1
+id: demo-project
+name: Shop API
+properties:
+  - name: baseUrl
+    value: http://localhost:8099/shop
+interfaces: []
+restServices:
+  - id: rest-shop
+    name: Shop API
+    endpoints:
+      - http://localhost:8099/shop
+    resources:
+      - id: res-orders
+        name: Orders
+        path: /orders
+        methods:
+          - id: m-orders-get
+            name: List orders
+            method: GET
+            requests:
+              - id: req-orders-list
+                name: Open orders
+                endpoint: http://localhost:8099/shop
+                timeoutMs: 30000
+                params:
+                  - name: status
+                    value: open
+                    style: query
+                headers:
+                  - name: Accept
+                    value: application/json
+                    enabled: true
+          - id: m-orders-post
+            name: Create order
+            method: POST
+            requests:
+              - id: req-orders-create
+                name: New order
+                endpoint: http://localhost:8099/shop
+                timeoutMs: 30000
+                mediaType: application/json
+                body: |
+                  {
+                    "customer": "C-1007",
+                    "items": [
+                      { "sku": "TEA-GREEN-100", "quantity": 2 },
+                      { "sku": "MUG-STONE", "quantity": 1 }
+                    ]
+                  }
+      - id: res-order
+        name: Order
+        path: /orders/{id}
+        params:
+          - name: id
+            value: "4711"
+            style: template
+        methods:
+          - id: m-order-get
+            name: Get order
+            method: GET
+            requests:
+              - id: req-order-get
+                name: Order 4711
+                endpoint: http://localhost:8099/shop
+                timeoutMs: 30000
+                params:
+                  - name: id
+                    value: "4711"
+                    style: template
+                headers:
+                  - name: Accept
+                    value: application/json
+                    enabled: true
+testSuites:
+  - id: suite-smoke
+    name: Smoke tests
+    testCases:
+      - id: case-orders
+        name: Order lifecycle
+        abortOnError: true
+        steps:
+          - id: step-create
+            name: Create order
+            type: restRequest
+            serviceId: rest-shop
+            resourceId: res-orders
+            method: POST
+            path: /orders
+            endpoint: ${#Project#baseUrl}
+            timeoutMs: 30000
+            mediaType: application/json
+            assertions:
+              - type: httpStatus
+                name: Created
+                codes: "201"
+              - type: jsonPathExists
+                name: Has an id
+                path: $.id
+                expected: "true"
+            body: |
+              { "customer": "C-1007", "items": [{ "sku": "TEA-GREEN-100", "quantity": 2 }] }
+          - id: step-get
+            name: Read order
+            type: restRequest
+            serviceId: rest-shop
+            resourceId: res-order
+            method: GET
+            path: /orders/4711
+            endpoint: ${#Project#baseUrl}
+            timeoutMs: 30000
+            assertions:
+              - type: httpStatus
+                name: OK
+                codes: "200"
+              - type: jsonPath
+                name: Status is open
+                path: $.status
+                expected: open
+                allowWildcards: false
+              - type: sla
+                name: Fast enough
+                maxMs: 500
+          - id: step-list
+            name: List open orders
+            type: restRequest
+            serviceId: rest-shop
+            resourceId: res-orders
+            method: GET
+            path: /orders
+            endpoint: ${#Project#baseUrl}
+            timeoutMs: 30000
+            params:
+              - name: status
+                value: open
+                style: query
+            assertions:
+              - type: jsonPathCount
+                name: Three orders
+                path: $.orders[*]
+                expected: "3"
+mockServices:
+  - id: mock-shop
+    name: Shop Mock
+    port: 8099
+    path: /shop
+    operations:
+      - id: mop-orders-list
+        name: GET /orders
+        kind: rest
+        method: GET
+        path: /orders
+        dispatch: sequence
+        defaultResponse: Open orders
+        responses:
+          - id: mres-orders-list
+            name: Open orders
+            status: 200
+            mediaType: application/json
+            body: |
+              {
+                "orders": [
+                  { "id": "4711", "customer": "C-1007", "status": "open", "total": 23.80 },
+                  { "id": "4712", "customer": "C-1012", "status": "open", "total": 112.50 },
+                  { "id": "4713", "customer": "C-1003", "status": "open", "total": 9.90 }
+                ]
+              }
+      - id: mop-orders-create
+        name: POST /orders
+        kind: rest
+        method: POST
+        path: /orders
+        dispatch: sequence
+        defaultResponse: Created
+        responses:
+          - id: mres-orders-created
+            name: Created
+            status: 201
+            mediaType: application/json
+            headers:
+              - name: Location
+                value: /shop/orders/4714
+                enabled: true
+            body: |
+              { "id": "4714", "status": "open" }
+      - id: mop-order-get
+        name: GET /orders/{id}
+        kind: rest
+        method: GET
+        path: /orders/{id}
+        dispatch: sequence
+        defaultResponse: Order
+        responses:
+          - id: mres-order
+            name: Order
+            status: 200
+            mediaType: application/json
+            body: |
+              {
+                "id": "${id}",
+                "customer": "C-1007",
+                "status": "open",
+                "items": [
+                  { "sku": "TEA-GREEN-100", "name": "Green tea, 100 g", "quantity": 2, "price": 6.95 },
+                  { "sku": "MUG-STONE", "name": "Stoneware mug", "quantity": 1, "price": 9.90 }
+                ],
+                "total": 23.80
+              }
+definitions: {}

@@ -1,0 +1,12 @@
+LatherIt for JetBrains IDEs
+Copyright 2026 Peter Heck (heck\it, https://heckit.app)
+
+The plugin source code in this repository is licensed under the Apache License,
+Version 2.0 (see LICENSE).
+
+The LatherIt user interface bundled into the plugin at build time is not part of
+this repository and is not licensed under the Apache License.
+
+"LatherIt", "heck\it" and the LatherIt logo are not licensed under the Apache
+License. They may not be used to identify modified versions or derived works
+without prior written permission.
