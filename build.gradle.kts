@@ -49,6 +49,10 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.2.1</h3>
+            <ul>
+              <li>No more deprecated API when opening a new or imported project file.</li>
+            </ul>
             <h3>0.2.0</h3>
             <ul>
               <li>Editing a request no longer reloads the view - selection and expanded tree stay as they were.</li>

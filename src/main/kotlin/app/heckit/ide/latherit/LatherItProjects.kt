@@ -7,7 +7,7 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
-import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
@@ -60,7 +60,7 @@ object LatherItProjects {
     }
 
     private fun open(project: Project, file: VirtualFile) {
-        FileEditorManager.getInstance(project).openFile(file, true)
+        OpenFileDescriptor(project, file).navigate(true)
     }
 
     private fun askName(project: Project, directory: VirtualFile, title: String, initial: String): String? =
