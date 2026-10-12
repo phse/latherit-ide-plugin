@@ -2,6 +2,7 @@
 
 LatherIt in JetBrains-IDEs (PhpStorm, IntelliJ IDEA, WebStorm, …): Projektdateien `*.latherit.yaml`
 öffnen sich mit einem Tab **LatherIt** vor dem normalen Text-Editor. Plugin-ID `app.heckit.ide.latherit`.
+· [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/34776-latherit)
 
 ![LatherIt in PhpStorm](marketplace/screenshots/01-request.png)
 

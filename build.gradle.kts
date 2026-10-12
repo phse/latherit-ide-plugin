@@ -49,6 +49,12 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.2.0</h3>
+            <ul>
+              <li>Editing a request no longer reloads the view - selection and expanded tree stay as they were.</li>
+              <li>XML in requests and responses can be folded by tag (also comments and CDATA).</li>
+              <li>Much smoother trackpad and mouse wheel scrolling in the editors.</li>
+            </ul>
             <h3>0.1.0</h3>
             <ul>
               <li>First preview: LatherIt as an editor for <code>*.latherit.yaml</code> project files.</li>
@@ -66,9 +72,11 @@ intellijPlatform {
         password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
     }
 
-    // Für ./gradlew publishPlugin (erst nach dem ersten manuellen Upload möglich).
+    // Für ./gradlew publishPlugin. Token aus der Umgebung oder global aus ~/.gradle/gradle.properties
+    // (jetbrainsMarketplaceToken=…, wie beim Runners Bar).
     publishing {
         token = providers.environmentVariable("PUBLISH_TOKEN")
+            .orElse(providers.gradleProperty("jetbrainsMarketplaceToken"))
     }
 
     pluginVerification {

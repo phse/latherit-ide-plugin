@@ -34,7 +34,11 @@ import javax.swing.KeyStroke
  * aus ([HostCommands]) und meldet das Ergebnis per `_settle` zurück.
  */
 class LatherItView(private val project: Project, private val file: VirtualFile, parent: Disposable) : Disposable {
-    private val browser = JBCefBrowser.createBuilder().build()
+    private val browser = JBCefBrowser.createBuilder()
+        // Natives Fenster statt Offscreen-Rendering: Nur so kommen Trackpad- und Mausrad-Ereignisse
+        // unverfälscht an (offscreen rechnet Swing sie um - der Text sprang und scrollte nach).
+        .setOffScreenRendering(false)
+        .build()
     private val query = JBCefJSQuery.create(browser as JBCefBrowserBase)
     private val mocks = MockServers(::emit)
     private val commands = HostCommands(project, file, mocks)

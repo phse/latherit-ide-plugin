@@ -31,6 +31,8 @@
   <li>Open any <code>*.latherit.yaml</code> file: the <b>LatherIt</b> tab shows the client, the <b>Text</b> tab the YAML.</li>
 </ul>
 
+<p>Like LatherIt? You can <a href="https://ko-fi.com/phse_de">buy me a coffee on Ko-fi</a>. It helps keep it free and maintained. More tools at <a href="https://heckit.app">heckit.app</a>.</p>
+
 <p><small>SoapUI is a trademark of SmartBear Software. LatherIt is not affiliated with or endorsed by SmartBear Software.</small></p>
 ]]></description>
 
@@ -41,6 +43,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <fileEditorProvider implementation="app.heckit.ide.latherit.LatherItEditorProvider"/>
+        <stripTrailingSpacesFilterFactory implementation="app.heckit.ide.latherit.LatherItStripFilterFactory"/>
     </extensions>
 
     <actions>

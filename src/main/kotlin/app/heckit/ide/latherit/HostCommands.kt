@@ -84,17 +84,19 @@ class HostCommands(private val project: Project, private val file: VirtualFile, 
         if (document != null) {
             val text = StringUtil.convertLineSeparators(content)
             ApplicationManager.getApplication().invokeAndWait({
-                if (document.text != text) {
-                    ownWrites.add(document)
-                    try {
+                // Auch das Speichern zählt als eigene Änderung: Die IDE kann dabei z. B. einen
+                // Zeilenumbruch am Dateiende ergänzen, das soll die Oberfläche nicht neu laden.
+                ownWrites.add(document)
+                try {
+                    if (document.text != text) {
                         WriteCommandAction.runWriteCommandAction(project, LatherItBundle.message("command.save"), null, {
                             document.setText(text)
                         })
-                    } finally {
-                        ownWrites.remove(document)
                     }
+                    FileDocumentManager.getInstance().saveDocument(document)
+                } finally {
+                    ownWrites.remove(document)
                 }
-                FileDocumentManager.getInstance().saveDocument(document)
             }, ModalityState.defaultModalityState())
             return
         }
