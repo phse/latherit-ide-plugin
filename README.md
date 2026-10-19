@@ -1,85 +1,123 @@
-# LatherIt als IDE-Plugin
+# LatherIt
 
-LatherIt in JetBrains-IDEs (PhpStorm, IntelliJ IDEA, WebStorm, …): Projektdateien `*.latherit.yaml`
-öffnen sich mit einem Tab **LatherIt** vor dem normalen Text-Editor. Plugin-ID `app.heckit.ide.latherit`.
-· [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/34776-latherit)
+<img src="marketplace/plugin-icon.png" width="360" alt="LatherIt icon for light and dark themes">
+
+Plugin ID `app.heckit.ide.latherit` · Vendor heck\it ([heckit.app](https://heckit.app)) · [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/34776-latherit) · Source: https://github.com/phse/latherit-ide-plugin
 
 ![LatherIt in PhpStorm](marketplace/screenshots/01-request.png)
 
-**Stand: Prototyp.** Geprüft: Projekt öffnen, automatisch speichern, Neuladen nach Änderungen von außen,
-HTTP-Requests, Ressourcen laden, `${#System#…}`/`${#Env#…}`, Web-Worker, Hell/Dunkel wie die IDE.
-Mock-Services, Anmeldung per Basic, Bearer, Digest und NTLM (mit Unit-Tests). Noch nicht geprüft: Dialoge,
-Zwischenablage, Tastenkürzel.
+LatherIt in JetBrains IDEs (PhpStorm, IntelliJ IDEA, WebStorm, …): project files `*.latherit.yaml`
+open with a **LatherIt** tab in front of the regular text editor. The UI is the same as in the
+LatherIt desktop app.
 
-## Aufbau
+**Status: prototype.** Tested: opening projects, auto-save, reloading after external changes, HTTP
+requests, loading resources, `${#System#…}`/`${#Env#…}`, web workers, light/dark like the IDE, mock
+services, authentication with Basic, Bearer, Digest and NTLM (with unit tests). Not tested yet:
+dialogs, clipboard, keyboard shortcuts.
 
-Die Oberfläche ist dieselbe wie in der LatherIt-Desktop-App. Ihr Quellcode liegt nicht in diesem Repository,
-sondern im (nicht öffentlichen) LatherIt-Repository: Der Gradle-Build ruft dort `npm run build` auf und packt
-das Ergebnis nach `/latherit-web/` ins Plugin, angezeigt wird es in einem eingebetteten Chromium (JCEF).
-Statt des Rust-Backends der Desktop-App beantwortet das Plugin die Befehle der Oberfläche - gleiche Namen,
-Parameter und Ergebnisse. Pfade wie `src/lib/backend.ts` in Kommentaren beziehen sich auf das LatherIt-Repository.
+Differences from the desktop app:
 
-| Datei | Inhalt |
-|---|---|
-| `LatherItEditorProvider.kt` | Editor-Tab für `*.latherit.yaml` |
-| `LatherItView.kt` | JCEF-Browser, Brücke (`window.__latheritIde`), Hell/Dunkel, Tastenkürzel, Neuladen bei Änderungen von außen |
-| `WebResources.kt` | liefert die Oberfläche unter `https://latherit.ide/` aus (echter Origin für Web-Worker) |
-| `HostCommands.kt` | Befehle: Dateien (über die Dokumente der IDE), System, Dialoge, Zwischenablage |
-| `HttpBackend.kt` | HTTP mit Proxy aus den IDE-Einstellungen (Gegenstück zu `http.rs`) |
-| `ChallengeAuth.kt` | Anmeldung: Basic, Bearer, Digest, NTLMv2 (Gegenstück zu `auth.rs`) |
-| `MockServers.kt` | Mock-Server mit dem HTTP-Server des JDK (Gegenstück zu `mock.rs`) |
-| `SystemTrust.kt` | Zertifikate wie im Browser: Stammzertifikate von macOS/Windows, danach die der IDE |
+- **Saving** happens automatically shortly after every change (like other files in the IDE), through
+  the IDE's document, so the change also shows up in the text tab, in Git and in Local History.
+- If the file is changed **outside** (text tab, Git, another program), the UI reloads.
+- **Mock services** belong to the editor tab that started them and end when it is closed.
+- **Keyboard shortcuts** taken by the IDE itself are passed on by the plugin: ⌘↵, ⌘S, ⇧⌘S, ⌘I, ⇧⌘N,
+  ⌘B, ⇧⌘F, ⌘1, ⌘2.
 
-Unterschiede zur Desktop-App:
+## Installation
 
-- **Speichern** geschieht automatisch kurz nach jeder Änderung (wie bei anderen Dateien in der IDE),
-  über das Dokument der IDE - die Änderung ist damit auch im Text-Tab, in Git und mit Local History sichtbar.
-- Wird die Datei **außerhalb** geändert (Text-Tab, Git, anderes Programm), lädt die Oberfläche neu.
-- **Mock-Services** gehören zum Editor-Tab, der sie gestartet hat, und enden, wenn er geschlossen wird.
-- **Tastenkürzel**, die die IDE selbst belegt, leitet das Plugin weiter: ⌘↵, ⌘S, ⇧⌘S, ⌘I, ⇧⌘N, ⌘B, ⇧⌘F, ⌘1, ⌘2.
+In the IDE, go to *Settings | Plugins | Marketplace* and search for **LatherIt**, or use the
+[Marketplace page](https://plugins.jetbrains.com/plugin/34776-latherit). Bugs and ideas are
+welcome as [GitHub issues](https://github.com/phse/latherit-ide-plugin/issues).
 
-## Bauen und starten
+## Build and run
 
-Voraussetzungen: ein Checkout von LatherIt (Standard: `../../latherit`, siehe `latheritDir`), Node/npm für
-dessen Build und JDK 17 oder neuer für Gradle - die Toolchain (JDK 25) lädt Gradle bei Bedarf selbst.
+Requirements: a checkout of LatherIt (default: `../../latherit`, see `latheritDir`), Node/npm for
+its build, and JDK 17 or later for Gradle. The toolchain (JDK 25) is downloaded by Gradle via
+foojay if needed.
 
 ```
-./gradlew runIde        # Sandbox-IDE mit dem Plugin
+./gradlew runIde        # start a sandbox IDE with the plugin
 ./gradlew buildPlugin   # build/distributions/latherit-ide-plugin-<version>.zip
-./gradlew verifyPlugin
-./gradlew test          # Unit-Tests (Anmeldung, Mock-Server)
+./gradlew test          # unit tests (authentication, mock server)
 ```
 
-Optionen (`-P…`):
+Verify against the target platform:
 
-- `openProject=/pfad/zum/projekt` öffnet direkt ein Projekt in der Sandbox
-- `cefDebugPort=9222` macht die Chromium-DevTools der Sandbox unter `http://localhost:9222` erreichbar
-- `npmCommand=/pfad/zu/npm`, falls Gradle `npm` nicht findet
+```
+./gradlew verifyPlugin
+```
 
-Standardmäßig lädt Gradle PhpStorm `platformVersion` (aus `gradle.properties`). Schneller mit einer
-installierten IDE: `local.properties` anlegen (wird nicht eingecheckt), z. B.
+Options (`-P…`):
+
+- `openProject=/path/to/project` opens a project in the sandbox right away
+- `cefDebugPort=9222` makes the sandbox's Chromium DevTools available at `http://localhost:9222`
+- `npmCommand=/path/to/npm` if Gradle can't find `npm`
+
+Install a self-built ZIP: *Settings | Plugins | ⚙ | Install Plugin from Disk…*
+
+By default Gradle downloads PhpStorm `platformVersion` (from `gradle.properties`) as the target
+platform. With an installed IDE it's faster: create `local.properties` (not checked in) containing
+e.g.
 
 ```
 platformLocalPath=/Applications/PhpStorm.app
-latheritDir=/pfad/zu/latherit
+latheritDir=/path/to/latherit
 ```
 
-## Screenshots neu erzeugen
+## Publishing (JetBrains Marketplace)
+
+The Marketplace description lives in `src/main/resources/META-INF/plugin.xml`, the change notes in
+`build.gradle.kts`, the icon in `META-INF/pluginIcon.svg` (light theme) and `pluginIcon_dark.svg`
+(dark theme). The IDE and the Marketplace read the icon straight from the ZIP, it doesn't have to be
+uploaded separately. `marketplace/plugin-icon.png` at the top of this README is a preview of both.
+
+1. Bump the version in `gradle.properties`, add change notes.
+2. `./gradlew clean buildPlugin verifyPlugin` (fix any deprecated API it reports before releasing)
+3. `PUBLISH_TOKEN=… ./gradlew publishPlugin` with a token from
+   https://plugins.jetbrains.com/author/me/tokens, or upload the ZIP from `build/distributions/` by
+   hand on the [Marketplace page](https://plugins.jetbrains.com/plugin/34776-latherit). JetBrains
+   reviews every version before it is released.
+4. Tag the commit (`git tag v<version>`) and push.
+
+Signing is optional (variables `CERTIFICATE_CHAIN`, `PRIVATE_KEY`, `PRIVATE_KEY_PASSWORD`,
+see https://plugins.jetbrains.com/docs/intellij/plugin-signing.html).
+
+## Regenerating the screenshots
 
 ```
 ./gradlew runIde -Pscreenshots=marketplace/screenshots
 ```
 
-Kopiert `marketplace/demo-project` nach `/Users/Shared/latherit-demo` (damit kein Benutzerpfad im Bild
-erscheint), öffnet es in der Sandbox, startet den Mock und schreibt vier PNGs nach `marketplace/screenshots/`
-(Request nebeneinander, übereinander, Mock mit Protokoll, Testlauf). Die IDE zeichnet ihr Fenster selbst, die
-Oberfläche kommt aus den Chromium-DevTools - Bildschirmaufnahme-Rechte sind nicht nötig. Der Helfer liegt in
-`src/screenshot/` und wird nur mit `-Pscreenshots` gebaut, nie in ein Release. Danach die Sandbox schließen.
+Copies `marketplace/demo-project` to `/Users/Shared/latherit-demo` (so no user path shows up in the
+images), opens it in the sandbox, starts the mock and writes four PNGs to `marketplace/screenshots/`
+(request side by side, stacked, mock with log, test run). The IDE paints its own window, the UI comes
+from the Chromium DevTools, so no screen recording permission is needed. The helper lives in
+`src/screenshot/` and is only compiled with `-Pscreenshots`, never into a release. Close the sandbox
+afterwards.
 
-Fragt die Sandbox beim ersten Lauf, ob sie dem Ordner vertrauen soll: einmal „Trust Project“ bestätigen und
-den Befehl erneut ausführen.
+If the sandbox asks on the first run, confirm "Trust Project" once and run the command again.
 
-## Lizenz
+## How it works
 
-Der Quellcode dieses Repositorys steht unter der [Apache License 2.0](LICENSE). Die beim Build eingebundene
-LatherIt-Oberfläche sowie Name und Logo sind davon ausgenommen, siehe [NOTICE](NOTICE).
+The UI's source code is not in this repository but in the (private) LatherIt repository: the
+Gradle build runs `npm run build` there and packs the result into the plugin under `/latherit-web/`,
+where an embedded Chromium (JCEF) shows it. Instead of the desktop app's Rust backend, the plugin
+answers the UI's commands, with the same names, parameters and results. Paths like
+`src/lib/backend.ts` in comments refer to the LatherIt repository.
+
+| File | Contents |
+| --- | --- |
+| `LatherItEditorProvider.kt` | Editor tab for `*.latherit.yaml` |
+| `LatherItView.kt` | JCEF browser, bridge (`window.__latheritIde`), light/dark, keyboard shortcuts, reloading after external changes |
+| `WebResources.kt` | Serves the UI at `https://latherit.ide/` (a real origin for web workers) |
+| `HostCommands.kt` | Commands: files (through the IDE's documents), system, dialogs, clipboard |
+| `HttpBackend.kt` | HTTP with the proxy from the IDE settings (counterpart of `http.rs`) |
+| `ChallengeAuth.kt` | Authentication: Basic, Bearer, Digest, NTLMv2 (counterpart of `auth.rs`) |
+| `MockServers.kt` | Mock servers with the JDK's HTTP server (counterpart of `mock.rs`) |
+| `SystemTrust.kt` | Certificates like in the browser: root certificates from macOS/Windows, then the IDE's |
+
+## License
+
+The source code of this repository is licensed under the [Apache License 2.0](LICENSE). The
+LatherIt UI included at build time as well as the name and logo are excluded, see [NOTICE](NOTICE).
