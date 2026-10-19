@@ -49,6 +49,10 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.2.2</h3>
+            <ul>
+              <li>New plugin icon.</li>
+            </ul>
             <h3>0.2.1</h3>
             <ul>
               <li>No more deprecated API when opening a new or imported project file.</li>
