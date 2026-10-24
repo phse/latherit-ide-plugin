@@ -1519,7 +1519,11 @@ KAPITEL = [
                 ["IntelliJ IDEA (macOS)", "RT-01 … RT-08", "IDE-01 … IDE-04"],
                 ["PyCharm, WebStorm, GoLand", "RT-01 … RT-08", "IDE-03"],
                 ["Älteste unterstützte Version (2026.2.0)", "RT-01 … RT-08", "IDE-05"],
+                ["Desktop-App (Windows, Linux, macOS)", "DT-01 … DT-08", "-"],
             ]),
+            ("p", "Testbuilds der Desktop-App liegen nach `npm run release:cross` unter `src-tauri/target/cross/` "
+                  "(Windows: `…-setup.exe`, Linux: `.AppImage`, `.deb`, `.rpm`). Windows 11 ARM und Ubuntu ARM (UTM mit "
+                  "Rosetta) führen die x64-Pakete aus."),
         ],
         "unter": [
             {
@@ -1564,6 +1568,76 @@ KAPITEL = [
                         "id": "RT-08", "titel": "Theme, Scrollen und Skript", "tag": "geändert 24.10.",
                         "schritte": ["B-30, B-31 (nur Scrollen mit Richtungswechsel), P-31 und S-04."],
                         "erwartet": ["Wie dort beschrieben."],
+                    },
+                ],
+            },
+            {
+                "titel": "Rauchtest Desktop-App", "tag": "neu 25.10.",
+                "faelle": [
+                    {
+                        "id": "DT-01", "titel": "Installieren und Starten", "tag": "neu 25.10.",
+                        "schritte": [
+                            "Windows: `LatherIt_…_x64-setup.exe` ausführen (Warnung „Unbekannter Herausgeber“ über *Weitere Informationen › Trotzdem ausführen*). "
+                            "Linux: `.deb` per `sudo apt install ./LatherIt_…_amd64.deb` bzw. `.rpm` installieren, außerdem das AppImage nach `chmod +x` direkt starten.",
+                            "LatherIt über Startmenü bzw. App-Übersicht starten.",
+                        ],
+                        "erwartet": [
+                            "Installation ohne Fehler, Eintrag mit LatherIt-Symbol im Startmenü bzw. in der App-Übersicht.",
+                            "Fenster mit Willkommensseite in unter 5 s, Schrift und Symbole scharf (auch bei 150 % Skalierung).",
+                        ],
+                    },
+                    {
+                        "id": "DT-02", "titel": "Projekt öffnen und speichern", "tag": "neu 25.10.",
+                        "schritte": [
+                            "`shop-api.latherit.yaml` über *Projekt öffnen* (Strg+O) wählen.",
+                            "Einen Request umbenennen, Strg+S, App schließen und neu starten.",
+                        ],
+                        "erwartet": [
+                            "Projekt erscheint im Baum, der Dateidialog ist der des Systems.",
+                            "Nach dem Neustart ist das Projekt wieder offen und die Umbenennung gespeichert.",
+                        ],
+                    },
+                    {
+                        "id": "DT-03", "titel": "REST und SOAP senden", "tag": "neu 25.10.",
+                        "schritte": ["R-01 und W-11 gegen den Testserver auf dem Mac (`--host 0.0.0.0`, Adresse des Macs statt localhost)."],
+                        "erwartet": ["Antworten wie dort beschrieben, Statuszeile mit Zeit und Größe."],
+                    },
+                    {
+                        "id": "DT-04", "titel": "HTTPS mit eigenem Zertifikat", "tag": "neu 25.10.",
+                        "schritte": ["GET `https://<mac>:8443/api/orders/4711`, die Nachfrage zum Zertifikat bestätigen."],
+                        "erwartet": ["Nachfrage erscheint einmal, danach Antwort 200 ohne erneute Nachfrage."],
+                    },
+                    {
+                        "id": "DT-05", "titel": "Mock starten", "tag": "neu 25.10.",
+                        "schritte": ["M-01, dann den Mock aus einem Browser in der VM aufrufen."],
+                        "erwartet": [
+                            "Mock antwortet. Windows: Die Firewall fragt beim ersten Start nach - mit *Abbrechen* bleibt er lokal erreichbar.",
+                        ],
+                    },
+                    {
+                        "id": "DT-06", "titel": "Kürzel, Zwischenablage, Scrollen", "tag": "neu 25.10.",
+                        "schritte": [
+                            "Strg+Enter senden, Strg+P *Gehe zu*, Strg+W Tab schließen, Strg+F im Body suchen.",
+                            "Body kopieren und in einen Editor der VM einfügen; Text aus der VM in den Body einfügen.",
+                            "Lange Antwort mit Mausrad und Touchpad scrollen.",
+                        ],
+                        "erwartet": ["Alle Kürzel wirken, Umlaute bleiben beim Kopieren erhalten, Scrollen ohne Ruckeln."],
+                    },
+                    {
+                        "id": "DT-07", "titel": "Hell und dunkel", "tag": "neu 25.10.",
+                        "schritte": ["Im System zwischen hellem und dunklem Design wechseln, während LatherIt offen ist."],
+                        "erwartet": ["LatherIt wechselt mit, auch Editor und Fensterrahmen; alles bleibt lesbar."],
+                    },
+                    {
+                        "id": "DT-08", "titel": "Beenden und Deinstallieren", "tag": "neu 25.10.",
+                        "schritte": [
+                            "Mit ungespeicherter Änderung Alt+F4 bzw. das Schließen-Kreuz drücken.",
+                            "Windows: über *Einstellungen › Apps* deinstallieren; Linux: `sudo apt remove latherit`.",
+                        ],
+                        "erwartet": [
+                            "Nachfrage zum Speichern erscheint, danach schließt die App vollständig (kein Prozess bleibt im Task-Manager bzw. `ps`).",
+                            "Deinstallation ohne Fehler, Startmenü-Eintrag weg; die Projektdateien bleiben erhalten.",
+                        ],
                     },
                 ],
             },
