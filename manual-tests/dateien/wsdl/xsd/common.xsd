@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <!-- Chameleon-Include: kein eigener targetNamespace -->
+  <xs:element name="Category">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="name" type="xs:string"/>
+        <xs:element name="parent" type="CategoryRef" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="CategoryRef">
+    <xs:sequence>
+      <xs:element name="name" type="xs:string"/>
+      <xs:element name="parent" type="CategoryRef" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ItemFilter">
+    <xs:sequence><xs:element name="sku" type="xs:string"/></xs:sequence>
+    <xs:attribute name="exact" type="xs:boolean"/>
+  </xs:complexType>
+</xs:schema>

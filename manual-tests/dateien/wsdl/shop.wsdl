@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:tns="http://example.com/shop/service"
+    xmlns:shop="http://example.com/shop/types"
+    targetNamespace="http://example.com/shop/service">
+  <wsdl:types>
+    <xsd:schema targetNamespace="http://example.com/shop/service/wrap">
+      <xsd:import namespace="http://example.com/shop/types" schemaLocation="xsd/shop-types.xsd"/>
+    </xsd:schema>
+  </wsdl:types>
+  <wsdl:message name="GetOrderRequest"><wsdl:part name="parameters" element="shop:GetOrder"/></wsdl:message>
+  <wsdl:message name="GetOrderResponse"><wsdl:part name="parameters" element="shop:GetOrderResponse"/></wsdl:message>
+  <wsdl:message name="AuthHeader"><wsdl:part name="auth" element="shop:Session"/></wsdl:message>
+  <wsdl:message name="PingRequest"/>
+  <wsdl:message name="PingResponse"/>
+  <wsdl:portType name="ShopPort">
+    <wsdl:operation name="GetOrder">
+      <wsdl:documentation>Liefert eine Bestellung.</wsdl:documentation>
+      <wsdl:input message="tns:GetOrderRequest"/>
+      <wsdl:output message="tns:GetOrderResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="Ping">
+      <wsdl:input message="tns:PingRequest"/>
+      <wsdl:output message="tns:PingResponse"/>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="ShopSoap11" type="tns:ShopPort">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="document"/>
+    <wsdl:operation name="GetOrder">
+      <soap:operation soapAction="urn:GetOrder"/>
+      <wsdl:input>
+        <soap:header message="tns:AuthHeader" part="auth" use="literal"/>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="Ping">
+      <soap:operation soapAction="urn:Ping"/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="ShopSoap12" type="tns:ShopPort">
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" style="document"/>
+    <wsdl:operation name="GetOrder">
+      <soap12:operation soapAction="urn:GetOrder"/>
+      <wsdl:input><soap12:body use="literal"/></wsdl:input>
+      <wsdl:output><soap12:body use="literal"/></wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="ShopService">
+    <wsdl:port name="ShopSoap11Port" binding="tns:ShopSoap11"><soap:address location="http://localhost:8088/shop"/></wsdl:port>
+    <wsdl:port name="ShopSoap12Port" binding="tns:ShopSoap12"><soap12:address location="http://localhost:8088/shop12"/></wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

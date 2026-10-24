@@ -1,0 +1,41 @@
+@page { size: A4; margin: 16mm 15mm 18mm 15mm; }
+:root { --accent: #5A5A8C; --line: #d8d8e4; --soft: #f3f3f8; --text: #1d1d24; }
+body { font: 10pt/1.45 -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: var(--text); background: #fff; }
+a { color: var(--accent); }
+a.file { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.8pt; }
+code { font-variant-ligatures: none; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.8pt; background: var(--soft); padding: 0 2px; border-radius: 2px; }
+pre.code {
+  font-family: Menlo, Consolas, monospace; font-size: 11px; line-height: 1.35;
+  background: var(--soft); border-left: 3px solid var(--accent); padding: 5px 8px; margin: 4px 0 6px;
+  white-space: pre; overflow: hidden; font-variant-ligatures: none; break-inside: avoid;
+}
+.cover { border-bottom: 3px solid var(--accent); margin-bottom: 14px; padding-bottom: 8px; }
+h1 { font-size: 22pt; margin: 0; color: var(--accent); }
+.subtitle { margin: 4px 0 0; color: #555; }
+h2 { font-size: 15pt; color: var(--accent); border-bottom: 1px solid var(--line); padding-bottom: 3px; margin: 18px 0 8px; }
+h2.chapter { break-before: page; }
+h3 { font-size: 12pt; margin: 14px 0 6px; break-after: avoid; }
+h4 { font-size: 10.5pt; margin: 0 0 4px; }
+.case, .table, table { break-inside: avoid; }
+.case { border: 1px solid var(--line); border-radius: 4px; padding: 7px 10px 6px; margin: 0 0 9px; }
+.case p { margin: 2px 0; }
+.case ol, .case ul { margin: 2px 0 4px; padding-left: 20px; }
+.case li { margin: 1px 0; }
+.id { display: inline-block; background: var(--accent); color: #fff; border-radius: 3px; padding: 0 5px; font-size: 9pt; margin-right: 4px; }
+.tag { float: right; font-size: 8pt; font-weight: normal; border: 1px solid var(--accent); color: var(--accent); border-radius: 8px; padding: 0 6px; }
+.label { font-weight: 600; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .04em; color: #666; margin-top: 4px !important; }
+.ziel { color: #444; font-style: italic; }
+.hint { font-size: 9pt; color: #555; border-top: 1px dashed var(--line); padding-top: 3px; margin-top: 4px !important; }
+table { border-collapse: collapse; width: 100%; margin: 4px 0 10px; font-size: 9pt; }
+th, td { border: 1px solid var(--line); padding: 3px 6px; text-align: left; vertical-align: top; }
+th { background: var(--soft); }
+.toc { padding-left: 18px; }
+.toc li { margin: 2px 0; }
+.toc-sub { color: #666; font-size: 9pt; margin-left: 6px; }
+
+a.ref {
+  color: inherit;
+  text-decoration: underline dotted;
+  font-weight: 600;
+}
+

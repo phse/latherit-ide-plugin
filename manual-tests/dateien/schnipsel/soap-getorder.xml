@@ -1,0 +1,12 @@
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+                  xmlns:shop="http://example.com/shop/types">
+   <soapenv:Header>
+      <shop:Session>${#Project#session}</shop:Session>
+   </soapenv:Header>
+   <soapenv:Body>
+      <shop:GetOrder version="1">
+         <shop:orderId>4711</shop:orderId>
+         <shop:customerNo>C-1007</shop:customerNo>
+      </shop:GetOrder>
+   </soapenv:Body>
+</soapenv:Envelope>

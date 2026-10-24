@@ -49,9 +49,10 @@ object ScreenshotMaker {
             frame.setBounds(60, 40, 1440, 860)
             ToolWindowManager.getInstance(project).getToolWindow("Project")?.hide()
         }
-        // Nebeneinander als Ausgangslage, dann neu laden, damit die Oberfläche es übernimmt
+        // Saubere Ausgangslage (keine Collections, Tabs o. Ä. aus früheren Sandbox-Sitzungen), nebeneinander,
+        // dann neu laden, damit die Oberfläche es übernimmt
         waitFor(view, "return !!document.querySelector('#app')")
-        js(view, "localStorage.setItem('latherit.splitOrientation', JSON.stringify('side')); location.reload()")
+        js(view, "localStorage.clear(); localStorage.setItem('latherit.splitOrientation', JSON.stringify('side')); location.reload()")
         Thread.sleep(2000)
         waitFor(view, "$STORES return store('workspace').projects.length > 0")
 

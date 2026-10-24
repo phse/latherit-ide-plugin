@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<con:soapui-project id="aaaa-1" activeEnvironment="Default" name="Shop Test" resourceRoot="" soapui-version="5.9.1" abortOnError="false" runType="SEQUENTIAL" xmlns:con="http://eviware.com/soapui/config">
+  <con:settings/>
+  <con:interface xsi:type="con:WsdlInterface" id="bbbb-1" wsaVersion="NONE" name="ShopSoap11" type="wsdl" bindingName="{http://example.com/shop/service}ShopSoap11" soapVersion="1_1" anonymous="optional" definition="http://localhost:8088/shop?wsdl" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <con:settings/>
+    <con:definitionCache type="TEXT" rootPart="http://localhost:8088/shop?wsdl">
+      <con:part><con:url>http://localhost:8088/shop?wsdl</con:url><con:content><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:tns="http://example.com/shop/service"
+    xmlns:shop="http://example.com/shop/types"
+    targetNamespace="http://example.com/shop/service">
+  <wsdl:types>
+    <xsd:schema targetNamespace="http://example.com/shop/service/wrap">
+      <xsd:import namespace="http://example.com/shop/types" schemaLocation="http://localhost:8088/shop?xsd=1"/>
+    </xsd:schema>
+  </wsdl:types>
+  <wsdl:message name="GetOrderRequest"><wsdl:part name="parameters" element="shop:GetOrder"/></wsdl:message>
+  <wsdl:message name="GetOrderResponse"><wsdl:part name="parameters" element="shop:GetOrderResponse"/></wsdl:message>
+  <wsdl:message name="AuthHeader"><wsdl:part name="auth" element="shop:Session"/></wsdl:message>
+  <wsdl:message name="PingRequest"/>
+  <wsdl:message name="PingResponse"/>
+  <wsdl:portType name="ShopPort">
+    <wsdl:operation name="GetOrder">
+      <wsdl:documentation>Liefert eine Bestellung.</wsdl:documentation>
+      <wsdl:input message="tns:GetOrderRequest"/>
+      <wsdl:output message="tns:GetOrderResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="Ping">
+      <wsdl:input message="tns:PingRequest"/>
+      <wsdl:output message="tns:PingResponse"/>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="ShopSoap11" type="tns:ShopPort">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="document"/>
+    <wsdl:operation name="GetOrder">
+      <soap:operation soapAction="urn:GetOrder"/>
+      <wsdl:input>
+        <soap:header message="tns:AuthHeader" part="auth" use="literal"/>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="Ping">
+      <soap:operation soapAction="urn:Ping"/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="ShopSoap12" type="tns:ShopPort">
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" style="document"/>
+    <wsdl:operation name="GetOrder">
+      <soap12:operation soapAction="urn:GetOrder"/>
+      <wsdl:input><soap12:body use="literal"/></wsdl:input>
+      <wsdl:output><soap12:body use="literal"/></wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="ShopService">
+    <wsdl:port name="ShopSoap11Port" binding="tns:ShopSoap11"><soap:address location="http://localhost:8088/shop"/></wsdl:port>
+    <wsdl:port name="ShopSoap12Port" binding="tns:ShopSoap12"><soap12:address location="http://localhost:8088/shop12"/></wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>
+]]></con:content><con:type>http://schemas.xmlsoap.org/wsdl/</con:type></con:part>
+      <con:part><con:url>http://localhost:8088/shop?xsd=1</con:url><con:content><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:shop="http://example.com/shop/types"
+    targetNamespace="http://example.com/shop/types"
+    elementFormDefault="qualified">
+  <xs:include schemaLocation="http://localhost:8088/shop?xsd=2"/>
+  <xs:element name="Session" type="xs:string"/>
+  <xs:element name="GetOrder">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="orderId" type="xs:long"/>
+        <xs:element name="includeItems" type="xs:boolean" minOccurs="0"/>
+        <xs:choice>
+          <xs:element name="customerNo" type="xs:string"/>
+          <xs:element name="email" type="xs:string"/>
+        </xs:choice>
+        <xs:element name="filter" type="shop:ItemFilter" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="shop:Category" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetOrderResponse" type="shop:Order"/>
+  <xs:complexType name="BaseEntity">
+    <xs:sequence><xs:element name="id" type="xs:string"/></xs:sequence>
+    <xs:attributeGroup ref="shop:Audit"/>
+  </xs:complexType>
+  <xs:complexType name="Order">
+    <xs:complexContent>
+      <xs:extension base="shop:BaseEntity">
+        <xs:sequence>
+          <xs:element name="amount" type="shop:Money"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Money">
+    <xs:simpleContent>
+      <xs:extension base="xs:decimal"><xs:attribute name="currency" type="xs:string" use="required"/></xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:attributeGroup name="Audit"><xs:attribute name="createdBy" type="xs:string"/></xs:attributeGroup>
+</xs:schema>
+]]></con:content><con:type>http://www.w3.org/2001/XMLSchema</con:type></con:part>
+      <con:part><con:url>http://localhost:8088/shop?xsd=2</con:url><con:content><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <!-- Chameleon-Include: kein eigener targetNamespace -->
+  <xs:element name="Category">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="name" type="xs:string"/>
+        <xs:element name="parent" type="CategoryRef" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="CategoryRef">
+    <xs:sequence>
+      <xs:element name="name" type="xs:string"/>
+      <xs:element name="parent" type="CategoryRef" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ItemFilter">
+    <xs:sequence><xs:element name="sku" type="xs:string"/></xs:sequence>
+    <xs:attribute name="exact" type="xs:boolean"/>
+  </xs:complexType>
+</xs:schema>
+]]></con:content><con:type>http://www.w3.org/2001/XMLSchema</con:type></con:part>
+    </con:definitionCache>
+    <con:endpoints><con:endpoint>http://localhost:8088/shop</con:endpoint><con:endpoint>https://test.example.com/shop</con:endpoint></con:endpoints>
+    <con:operation id="cccc-1" isOneWay="false" action="urn:GetOrder" name="GetOrder" bindingOperationName="GetOrder" type="Request-Response" inputName="" receivesAttachments="false" sendsAttachments="false" anonymous="optional">
+      <con:settings/>
+      <con:call id="dddd-1" name="Bestellung 42">
+        <con:settings><con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;entry key="X-Trace" value="abc" xmlns="http://eviware.com/soapui/config"/></con:setting></con:settings>
+        <con:encoding>UTF-8</con:encoding>
+        <con:endpoint>https://test.example.com/shop</con:endpoint>
+        <con:request><![CDATA[<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:shop="http://example.com/shop/types">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <shop:GetOrder><shop:orderId>${#Project#orderId}</shop:orderId></shop:GetOrder>
+   </soapenv:Body>
+</soapenv:Envelope>]]></con:request>
+        <con:credentials><con:authType>No Authorization</con:authType></con:credentials>
+        <con:jmsConfig JMSDeliveryMode="PERSISTENT"/><con:jmsPropertyConfig/>
+        <con:wsaConfig mustUnderstand="NONE" version="200508" action="urn:GetOrder"/><con:wsrmConfig version="1.2"/>
+      </con:call>
+      <con:call id="dddd-2" name="Leer">
+        <con:settings><con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting></con:settings>
+        <con:encoding>UTF-8</con:encoding>
+        <con:endpoint>http://localhost:8088/shop</con:endpoint>
+        <con:request><![CDATA[<x/>]]></con:request>
+        <con:credentials><con:username>tester</con:username><con:authType>Basic</con:authType></con:credentials>
+      </con:call>
+    </con:operation>
+    <con:operation id="cccc-2" isOneWay="false" action="urn:Ping" name="Ping" bindingOperationName="Ping" type="Request-Response" inputName="" receivesAttachments="false" sendsAttachments="false" anonymous="optional"><con:settings/></con:operation>
+  </con:interface>
+  <con:interface xsi:type="con:RestService" id="eeee-1" wadlVersion="http://wadl.dev.java.net/2009/02" name="Rest" type="rest" basePath="/api" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><con:settings/><con:definitionCache type="TEXT" rootPart=""/><con:endpoints><con:endpoint>http://localhost:8090</con:endpoint></con:endpoints>
+    <con:resource name="Orders" path="/orders" id="rrrr-10"><con:settings/><con:parameters><con:parameter><con:name>tenant</con:name><con:value>a</con:value><con:style>HEADER</con:style></con:parameter></con:parameters>
+      <con:resource name="Order" path="{id}" id="rrrr-11"><con:settings/><con:parameters><con:parameter required="true"><con:name>id</con:name><con:value/><con:style>TEMPLATE</con:style><con:default/></con:parameter></con:parameters>
+        <con:method name="Bestellung lesen" id="mmmm-1" method="GET"><con:settings/><con:parameters><con:parameter><con:name>expand</con:name><con:value>items</con:value><con:style>QUERY</con:style></con:parameter></con:parameters>
+          <con:representation type="RESPONSE"><con:mediaType>application/json</con:mediaType><con:status>200</con:status></con:representation>
+          <con:request name="Bestellung 7" id="qqqq-1" mediaType="application/json"><con:settings><con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;entry key="Accept" value="application/json" xmlns="http://eviware.com/soapui/config"/></con:setting></con:settings><con:endpoint>http://localhost:8090</con:endpoint><con:request/><con:credentials><con:authType>No Authorization</con:authType></con:credentials><con:jmsConfig JMSDeliveryMode="PERSISTENT"/><con:jmsPropertyConfig/><con:parameters><entry key="id" value="7" xmlns="http://eviware.com/soapui/config"/></con:parameters></con:request>
+        </con:method>
+      </con:resource>
+      <con:method name="Anlegen" id="mmmm-2" method="POST"><con:settings/><con:parameters/>
+        <con:request name="Neu" id="qqqq-2" mediaType="application/json" postQueryString="false"><con:settings/><con:endpoint>http://localhost:8090</con:endpoint><con:request>{"sku": "A-1"}</con:request><con:parameters/></con:request>
+      </con:method>
+    </con:resource>
+  </con:interface>
+  <con:testSuite id="ffff-1" name="Suite"><con:settings/><con:runType>SEQUENTIAL</con:runType>
+    <con:testCase id="gggg-1" failOnError="true" failTestCaseOnErrors="true" keepSession="false" maxResults="0" name="Case" searchProperties="true">
+      <con:settings/>
+      <con:testStep type="request" name="Bestellung holen" id="hhhh-1"><con:settings/><con:config xsi:type="con:RequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><con:interface>ShopSoap11</con:interface><con:operation>GetOrder</con:operation><con:request name="Bestellung holen" id="rrrr-1">
+        <con:settings><con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting></con:settings>
+        <con:encoding>UTF-8</con:encoding>
+        <con:endpoint>http://localhost:8088/shop</con:endpoint>
+        <con:request><![CDATA[<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:shop="http://example.com/shop/types">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <shop:GetOrder><shop:orderId>${#TestCase#orderId}</shop:orderId></shop:GetOrder>
+   </soapenv:Body>
+</soapenv:Envelope>]]></con:request>
+        <con:assertion type="SOAP Response" id="aaaa-1"/>
+        <con:assertion type="Simple Contains" id="aaaa-2" name="Enthält Betrag"><con:configuration><token>amount</token><ignoreCase>false</ignoreCase><useRegEx>false</useRegEx></con:configuration></con:assertion>
+        <con:assertion type="XPath Match" id="aaaa-3" name="ID stimmt"><con:configuration><path>declare namespace shop='http://example.com/shop/types';
+//shop:id</path><content>${#TestCase#orderId}</content><allowWildcards>false</allowWildcards><ignoreNamspaceDifferences>false</ignoreNamspaceDifferences><ignoreComments>false</ignoreComments></con:configuration></con:assertion>
+        <con:assertion type="GroovyScriptAssertion" id="aaaa-4" name="Skript"><con:configuration><scriptText>assert true</scriptText></con:configuration></con:assertion>
+        <con:credentials><con:authType>No Authorization</con:authType></con:credentials>
+        <con:jmsConfig JMSDeliveryMode="PERSISTENT"/><con:jmsPropertyConfig/><con:wsaConfig mustUnderstand="NONE" version="200508"/><con:wsrmConfig version="1.2"/>
+      </con:request></con:config></con:testStep>
+      <con:testStep type="transfer" name="ID merken" id="hhhh-2"><con:settings/><con:config xsi:type="con:PropertyTransfersStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><con:transfers setNullOnMissingSource="true" transferTextContent="true" failOnError="true" ignoreEmpty="false" transferToAll="false" entitize="false" transferChildNodes="false"><con:name>id</con:name><con:sourceType>Response</con:sourceType><con:sourceStep>Bestellung holen</con:sourceStep><con:sourcePath>declare namespace shop='http://example.com/shop/types';
+//shop:id/text()</con:sourcePath><con:targetType>lastOrderId</con:targetType><con:targetStep>#Project#</con:targetStep><con:upgraded>true</con:upgraded></con:transfers></con:config></con:testStep>
+      <con:testStep type="delay" name="Pause" id="hhhh-3"><con:settings/><con:config><delay>250</delay></con:config></con:testStep>
+      <con:testStep type="groovy" name="Skript" id="hhhh-4"><con:settings/><con:config><script>log.info "hallo"</script></con:config></con:testStep>
+      <con:testStep type="calltestcase" name="Aufruf" id="hhhh-5"><con:settings/></con:testStep>
+      <con:properties><con:property><con:name>orderId</con:name><con:value>42</con:value></con:property></con:properties>
+    </con:testCase>
+    <con:testCase id="gggg-2" failOnError="true" name="REST" searchProperties="true">
+      <con:settings/>
+      <con:testStep type="restrequest" name="Lesen" id="hhhh-10"><con:settings/><con:config service="Rest" resourcePath="/api/orders/{id}" methodName="Bestellung lesen" xsi:type="con:RestRequestStep" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><con:restRequest name="Lesen" id="qqqq-3" mediaType="application/json"><con:settings/><con:endpoint>http://localhost:8090</con:endpoint><con:request/>
+        <con:assertion type="Valid HTTP Status Codes" id="aaaa-10" name="200"><con:configuration><codes>200</codes></con:configuration></con:assertion>
+        <con:assertion type="JsonPath Match" id="aaaa-11" name="SKU"><con:configuration><path>$.items[0].sku</path><content>A-1</content><allowWildcards>false</allowWildcards></con:configuration></con:assertion>
+        <con:assertion type="JsonPath Count" id="aaaa-12" name="Anzahl"><con:configuration><path>$.items</path><content>2</content></con:configuration></con:assertion>
+        <con:parameters><entry key="id" value="${#TestCase#orderId}" xmlns="http://eviware.com/soapui/config"/></con:parameters></con:restRequest></con:config></con:testStep>
+      <con:testStep type="httprequest" name="Frei" id="hhhh-11"><con:settings/><con:config method="POST" xsi:type="con:HttpRequest" name="Frei" mediaType="application/json" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><con:settings/><con:endpoint>http://localhost:8090/api/orders?dry=true</con:endpoint><con:request>{"sku": "${Lesen#Response#$.items[1].sku}"}</con:request>
+        <con:assertion type="JsonPath Existence Match" id="aaaa-13" name="ID da"><con:configuration><path>$.id</path><content>true</content></con:configuration></con:assertion>
+        <con:parameters/></con:config></con:testStep>
+      <con:properties><con:property><con:name>orderId</con:name><con:value>7</con:value></con:property></con:properties>
+      <con:loadTest name="Last" id="nnnn-1"><con:settings/><con:threadCount>3</con:threadCount><con:startDelay>0</con:startDelay><con:sampleInterval>250</con:sampleInterval><con:calculateTPSOnTimePassed>true</con:calculateTPSOnTimePassed><con:resetStatisticsOnThreadCountChange>true</con:resetStatisticsOnThreadCountChange><con:historyLimit>-1</con:historyLimit><con:testLimit>20</con:testLimit><con:limitType>COUNT</con:limitType><con:loadStrategy><con:type>Simple</con:type><con:config><testDelay>100</testDelay><randomFactor>0.5</randomFactor></con:config></con:loadStrategy></con:loadTest>
+    </con:testCase>
+  </con:testSuite>
+  <con:mockService id="iiii-1" port="8089" path="/mock" host="localhost" name="Mock"><con:settings/><con:properties/>
+    <con:mockOperation name="GetOrder" id="jjjj-1" interface="ShopSoap11" operation="GetOrder"><con:settings/>
+      <con:defaultResponse>Standard</con:defaultResponse><con:dispatchStyle>QUERY_MATCH</con:dispatchStyle>
+      <con:dispatchConfig xsi:type="con:MockOperationQueryMatchDispatch" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><con:query><con:name>Nummer 1</con:name><con:query>declare namespace shop='http://example.com/shop/types';
+//shop:orderId</con:query><con:match>1</con:match><con:response>Eins</con:response></con:query></con:dispatchConfig>
+      <con:response name="Standard" id="kkkk-1" httpResponseStatus="200" encoding="UTF-8"><con:settings/><con:responseContent><![CDATA[<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"><soapenv:Body><shop:GetOrderResponse xmlns:shop="http://example.com/shop/types"><shop:id>${#Project#orderId}</shop:id></shop:GetOrderResponse></soapenv:Body></soapenv:Envelope>]]></con:responseContent><con:wsaConfig mustUnderstand="NONE" version="200508" action="urn:GetOrder"/></con:response>
+      <con:response name="Eins" id="kkkk-2" httpResponseStatus="200" encoding="UTF-8"><con:settings/><con:responseContent><![CDATA[<x>eins</x>]]></con:responseContent><con:header><con:name>X-Mock</con:name><con:value>ja</con:value></con:header></con:response>
+    </con:mockOperation>
+  </con:mockService>
+  <con:restMockService id="iiii-2" port="8091" path="/" host="localhost" name="Rest-Mock"><con:settings/><con:properties/>
+    <con:restMockAction name="/orders/{id}" method="GET" resourcePath="/orders/{id}" id="llll-1"><con:settings/><con:defaultResponse>Ok</con:defaultResponse><con:dispatchStyle>SCRIPT</con:dispatchStyle><con:dispatchPath>return "Ok"</con:dispatchPath>
+      <con:response name="Ok" id="kkkk-3" httpResponseStatus="200" mediaType="application/json"><con:settings/><con:responseContent>{"id": "${id}"}</con:responseContent></con:response>
+    </con:restMockAction>
+  </con:restMockService>
+  <con:properties><con:property><con:name>orderId</con:name><con:value>42</con:value></con:property></con:properties>
+  <con:wssContainer/><con:oAuth2ProfileContainer/><con:oAuth1ProfileContainer/><con:sensitiveInformation/>
+</con:soapui-project>

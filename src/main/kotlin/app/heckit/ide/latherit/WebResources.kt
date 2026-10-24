@@ -37,16 +37,22 @@ class WebResources(private val bridgeScript: () -> String) : CefRequestHandlerAd
         }
     }
 
-    private fun load(path: String): CefResourceHandler {
+    private fun load(path: String): CefResourceHandler =
+        resource(path).let { BytesResourceHandler(it.status, it.mimeType, it.bytes) }
+
+    /** Inhalt zu einem Pfad unter /latherit-web/ (ohne führenden Schrägstrich). */
+    internal fun resource(path: String): Resource {
         val stream = if (".." in path) null else javaClass.getResourceAsStream("/latherit-web/$path")
-        if (stream == null) return BytesResourceHandler(404, "text/plain", "Not found: $path".toByteArray())
+        if (stream == null) return Resource(404, "text/plain", "Not found: $path".toByteArray())
         var bytes = stream.use { it.readBytes() }
         if (path == "index.html") {
             val html = bytes.toString(Charsets.UTF_8)
             bytes = html.replaceFirst("<head>", "<head>\n<script>${bridgeScript()}</script>").toByteArray()
         }
-        return BytesResourceHandler(200, mimeType(path), bytes)
+        return Resource(200, mimeType(path), bytes)
     }
+
+    internal class Resource(val status: Int, val mimeType: String, val bytes: ByteArray)
 
     private fun mimeType(path: String): String = when (path.substringAfterLast('.')) {
         "html" -> "text/html"

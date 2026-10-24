@@ -14,7 +14,9 @@ import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.ui.InputValidatorEx
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
+import java.nio.file.Path
 import java.util.UUID
 
 /**
@@ -40,7 +42,7 @@ object LatherItProjects {
     fun chooseAndOpen(project: Project, directory: VirtualFile?) {
         val descriptor = FileChooserDescriptorFactory.singleFile()
             .withTitle(LatherItBundle.message("dialog.openProject.title"))
-            .withExtensionFilter(LatherItBundle.message("filter.project"), "yaml")
+            .withExtensionFilter(LatherItBundle.message("filter.project"), "yaml", "yml")
         val file = FileChooser.chooseFile(descriptor, project, directory ?: project.guessProjectDir()) ?: return
         open(project, file)
     }
@@ -56,6 +58,13 @@ object LatherItProjects {
         val name = askName(project, target, LatherItBundle.message("dialog.importSoapUi.title"), suggested) ?: return
         val file = createFile(project, target, name)
         file.putUserData(IMPORT_FROM, source.path)
+        open(project, file)
+    }
+
+    /** Projektdatei per Pfad öffnen (Collections) - liegt sie schon in einem Tab, wird er nur nach vorn geholt. */
+    fun openPath(project: Project, path: String) {
+        val file = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(Path.of(path))
+            ?: throw HostException("$path: Datei nicht gefunden")
         open(project, file)
     }
 

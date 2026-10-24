@@ -14,7 +14,7 @@ import com.intellij.openapi.project.Project
 class LatherItStripFilterFactory : StripTrailingSpacesFilterFactory() {
     override fun createFilter(project: Project?, document: Document): StripTrailingSpacesFilter {
         val file = FileDocumentManager.getInstance().getFile(document)
-        return if (file != null && file.name.endsWith(".${LatherItEditorProvider.FILE_EXTENSION}")) {
+        return if (file != null && LatherItEditorProvider.isProjectFile(file.name)) {
             StripTrailingSpacesFilter.NOT_ALLOWED
         } else {
             StripTrailingSpacesFilter.ALL_LINES

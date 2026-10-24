@@ -8,10 +8,14 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.net.http.HttpTimeoutException
+import javax.net.ssl.SSLHandshakeException
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
+import java.util.zip.GZIPInputStream
+import java.util.zip.Inflater
+import java.util.zip.InflaterInputStream
 
 /** Request wie in src/lib/backend.ts (`HttpRequest`). */
 class HttpRequestData(
@@ -51,18 +55,26 @@ class HttpResponseData(
  * Zertifikate wie im Browser (siehe [SystemTrust]).
  */
 object HttpBackend {
-    private val client: HttpClient by lazy { newClient() }
+    /**
+     * Ohne Authenticator: Mit einem Authenticator beantwortet der JDK-Client jede 401 mit Basic-Challenge selbst
+     * und scheitert mit „No credentials provided“, wenn er nichts bekommt - die 401 sähe man nie. Die
+     * Anmeldung am Server macht LatherIt selbst (siehe [ChallengeAuth]).
+     */
+    private val client: HttpClient by lazy { newClient(proxyAuth = false) }
 
-    private fun newClient(): HttpClient {
+    /** Mit der Proxy-Anmeldung der IDE - nur, wenn der Proxy sie verlangt (407). */
+    private val proxyAuthClient: HttpClient by lazy { newClient(proxyAuth = true) }
+
+    private fun newClient(proxyAuth: Boolean): HttpClient {
         val proxies = JdkProxyProvider.getInstance()
-        return HttpClient.newBuilder()
+        val builder = HttpClient.newBuilder()
             // SOAP-Server erwarten HTTP/1.1; HTTP/2 würde Header-Namen außerdem kleinschreiben.
             .version(HttpClient.Version.HTTP_1_1)
             .followRedirects(HttpClient.Redirect.NORMAL)
             .proxy(proxies.proxySelector)
-            .authenticator(proxies.authenticator)
             .sslContext(SystemTrust.sslContext())
-            .build()
+        if (proxyAuth) builder.authenticator(proxies.authenticator)
+        return builder.build()
     }
 
     /** Diese Header setzt Javas HTTP-Client selbst und lehnt sie im Request ab. */
@@ -97,7 +109,15 @@ object HttpBackend {
         fun attempt(via: HttpClient, authorization: String?): HttpResponse<ByteArray> {
             val builder = base.copy()
             authorization?.let { builder.setHeader("Authorization", it) }
-            return send(via, builder.build())
+            val built = builder.build()
+            // Verlangt der Proxy eine Anmeldung, mit der Proxy-Anmeldung der IDE wiederholen
+            val response = try {
+                send(via, built)
+            } catch (e: HostException) {
+                if (via !== client || e.message?.contains("407") != true) throw e
+                return send(proxyAuthClient, built)
+            }
+            return if (response.statusCode() == 407 && via === client) send(proxyAuthClient, built) else response
         }
 
         val started = System.nanoTime()
@@ -108,10 +128,10 @@ object HttpBackend {
             "digest" -> ChallengeAuth.digest(auth, method, uri, request.body) { attempt(client, it) }
             // NTLM authentifiziert eine Verbindung - daher ein eigener Client: Beide Runden laufen nacheinander
             // über dessen einzige Verbindung.
-            "ntlm" -> newClient().use { single -> ChallengeAuth.ntlm(auth) { attempt(single, it) } }
+            "ntlm" -> newClient(proxyAuth = false).use { single -> ChallengeAuth.ntlm(auth) { attempt(single, it) } }
             else -> throw HostException("Unbekannte Anmeldung: ${auth.kind}")
         }
-        val bytes = response.body()
+        val bytes = decompress(response.body(), response.headers().firstValue("Content-Encoding").orElse(null))
         val timeMs = (System.nanoTime() - started) / 1_000_000
         return HttpResponseData(
             status = response.statusCode(),
@@ -147,9 +167,31 @@ object HttpBackend {
             .header("User-Agent", "LatherIt")
             .timeout(Duration.ofSeconds(60))
             .build()
-        val response = send(client, request)
+        // Wie in execute: Proxy-Anmeldung nur, wenn der Proxy sie verlangt
+        val response = try {
+            send(client, request).let { if (it.statusCode() == 407) send(proxyAuthClient, request) else it }
+        } catch (e: HostException) {
+            if (e.message?.contains("407") != true) throw e
+            send(proxyAuthClient, request)
+        }
         if (response.statusCode() !in 200..299) throw HostException("$url lieferte HTTP ${response.statusCode()}")
-        return decode(response.body(), charset(response))
+        return decode(decompress(response.body(), response.headers().firstValue("Content-Encoding").orElse(null)), charset(response))
+    }
+
+    /**
+     * Komprimierte Antworten entpacken (`Content-Encoding: gzip` bzw. `deflate`) - der JDK-Client macht das nicht
+     * selbst, die Desktop-App (reqwest) schon. Unbekanntes (z. B. `br`) oder Kaputtes bleibt, wie es kam.
+     */
+    fun decompress(bytes: ByteArray, encoding: String?): ByteArray {
+        if (bytes.isEmpty()) return bytes
+        return when (encoding?.trim()?.lowercase()) {
+            "gzip", "x-gzip" -> runCatching { GZIPInputStream(bytes.inputStream()).use { it.readAllBytes() } }.getOrDefault(bytes)
+            // deflate: eigentlich zlib-Format, manche Server schicken aber rohes Deflate
+            "deflate" -> runCatching { InflaterInputStream(bytes.inputStream()).use { it.readAllBytes() } }
+                .recoverCatching { InflaterInputStream(bytes.inputStream(), Inflater(true)).use { it.readAllBytes() } }
+                .getOrDefault(bytes)
+            else -> bytes
+        }
     }
 
     /** Bytes in Text umwandeln: BOM hat Vorrang, dann der Charset-Header, sonst UTF-8. */
@@ -169,6 +211,13 @@ object HttpBackend {
         throw HostException(describe("Zeitüberschreitung", request, e))
     } catch (e: ConnectException) {
         throw HostException(describe("Verbindung fehlgeschlagen", request, e))
+    } catch (e: SSLHandshakeException) {
+        // Die IDE fragt bei einem abgelehnten Zertifikat bis zum Neustart nicht noch einmal - das gehört in den Text
+        throw HostException(
+            describe("Zertifikat nicht vertrauenswürdig oder abgelehnt", request, e) +
+                "\nWurde es in der Rückfrage abgelehnt, fragt die IDE erst nach einem Neustart wieder. Akzeptierte " +
+                "Zertifikate stehen unter Settings | Tools | Server Certificates.",
+        )
     } catch (e: IOException) {
         throw HostException(describe("Fehler", request, e))
     } catch (e: InterruptedException) {

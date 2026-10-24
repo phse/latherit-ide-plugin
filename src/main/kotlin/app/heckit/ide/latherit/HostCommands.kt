@@ -12,6 +12,10 @@ import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.fileChooser.FileChooserFactory
 import com.intellij.openapi.fileChooser.FileSaverDescriptor
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.find.FindManager
+import com.intellij.find.findInProject.FindInProjectManager
+import com.intellij.openapi.actionSystem.impl.SimpleDataContext
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
@@ -25,6 +29,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
+import java.util.concurrent.ConcurrentHashMap
 
 /** Fehler, deren Text die Oberfläche so anzeigen soll. */
 class HostException(message: String) : Exception(message)
@@ -34,8 +39,37 @@ class HostException(message: String) : Exception(message)
  * gleiche Namen, Parameter und Ergebnisse - plus Dialoge und Zwischenablage aus der IDE.
  * Die Mock-Server laufen in [MockServers].
  */
-class HostCommands(private val project: Project, private val file: VirtualFile, private val mocks: MockServers) {
+class HostCommands(
+    private val project: Project,
+    private val file: VirtualFile,
+    private val mocks: MockServers,
+    /** Die Oberfläche hat einen veralteten Stand und muss neu laden (siehe [writeTextFile]). */
+    private val reload: () -> Unit = {},
+    /** Die Oberfläche ist geladen und gezeichnet (Ladekreis ausblenden). */
+    private val ready: () -> Unit = {},
+) {
+    /** Aufgeklappte Knoten und Auswahl im Baum (siehe [LatherItTreeStates]). */
+    private val treeStates get() = project.getService(LatherItTreeStates::class.java)
+
     private val gson = Gson()
+
+    /** Dokumente, die gerade von dieser Oberfläche selbst geschrieben werden (nur auf dem EDT benutzt). */
+    private val ownWrites = mutableSetOf<Document>()
+
+    /** Stand jedes Dokuments (`modificationStamp`), den diese Oberfläche zuletzt gelesen oder geschrieben hat. */
+    private val knownStamps = ConcurrentHashMap<Document, Long>()
+
+    /**
+     * Pfad der Projektdatei beim Öffnen des Tabs. Die Oberfläche kennt nur diesen; nach Umbenennen oder
+     * Verschieben steht er weiter für [file], sonst entstünde unter dem alten Namen eine neue Datei.
+     */
+    private val startPath: Path = Path.of(file.path)
+
+    private fun findFile(path: Path): VirtualFile? =
+        if (path == startPath && file.isValid) file else LocalFileSystem.getInstance().refreshAndFindFileByNioFile(path)
+
+    /** Die Änderung am Dokument stammt von dieser Oberfläche - nicht neu laden. */
+    fun isOwnWrite(document: Document): Boolean = document in ownWrites
 
     fun run(command: String, args: JsonObject): CompletableFuture<Any?> = when (command) {
         "http_request" -> background { HttpBackend.execute(gson.fromJson(args.get("request"), HttpRequestData::class.java)) }
@@ -43,6 +77,8 @@ class HostCommands(private val project: Project, private val file: VirtualFile, 
         "read_text_file" -> background { readTextFile(args.string("path")) }
         "write_text_file" -> background { writeTextFile(args.string("path"), args.string("content")); null }
         "system_info" -> background { systemInfo() }
+        "tree_state_get" -> CompletableFuture.completedFuture(treeStates.get(file.url))
+        "tree_state_set" -> { treeStates.set(file.url, args.string("state")); CompletableFuture.completedFuture(null) }
         "open_dialog" -> onEdt { openDialog(filters(args)) }
         "save_dialog" -> onEdt { saveDialog(args.optString("defaultPath"), filters(args)) }
         "clipboard_read" -> onEdt { CopyPasteManager.getInstance().getContents<String>(DataFlavor.stringFlavor) ?: "" }
@@ -51,6 +87,12 @@ class HostCommands(private val project: Project, private val file: VirtualFile, 
         // Projekte gehören im Plugin je zu einer Datei mit eigenem Tab (siehe LatherItProjects)
         "new_project" -> onEdt { LatherItProjects.createNew(project, file.parent); null }
         "open_project" -> onEdt { LatherItProjects.chooseAndOpen(project, file.parent); null }
+        // ⌘W ohne offenen LatherIt-Tab: wie in der IDE den Editor (das Projekt) schließen
+        "close_editor" -> onEdt { FileEditorManager.getInstance(project).closeFile(file); null }
+        // ⇧⌘F im LatherIt-Tab: Find in Files der IDE mit dem dort markierten Text
+        "ui_ready" -> onEdt { ready(); null }
+        "find_in_files" -> onEdt { findInFiles(args.string("text")); null }
+        "open_project_path" -> onEdt { LatherItProjects.openPath(project, args.string("path")); null }
         "import_soapui" -> onEdt { LatherItProjects.importSoapUi(project, file.parent); null }
         "mock_start" -> background { mocks.start(args.string("mockId"), args.int("port"), args.get("public")?.asBoolean == true) }
         "mock_stop" -> background { mocks.stop(args.string("mockId")); null }
@@ -64,11 +106,19 @@ class HostCommands(private val project: Project, private val file: VirtualFile, 
     // ---------- Dateien ----------
 
     /** Ist die Datei in der IDE geöffnet, gilt der Stand im Editor (auch ungespeichert). */
+    private fun findInFiles(text: String) {
+        val model = FindManager.getInstance(project).findInProjectModel.clone()
+        if (text.isNotEmpty()) model.stringToFind = text
+        FindInProjectManager.getInstance(project).findInProject(SimpleDataContext.getProjectContext(project), model)
+    }
+
     private fun readTextFile(path: String): String {
-        val file = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(Path.of(path))
-            ?: throw HostException("$path: Datei nicht gefunden")
+        val file = findFile(Path.of(path)) ?: throw HostException("$path: Datei nicht gefunden")
         FileDocumentManager.getInstance().getCachedDocument(file)?.let { document ->
-            return ApplicationManager.getApplication().runReadAction<String> { document.text }
+            return ApplicationManager.getApplication().runReadAction<String> {
+                knownStamps[document] = document.modificationStamp
+                document.text
+            }
         }
         return HttpBackend.decode(file.contentsToByteArray(), null)
     }
@@ -76,14 +126,24 @@ class HostCommands(private val project: Project, private val file: VirtualFile, 
     /**
      * Schreibt über das Dokument der IDE, wenn die Datei geöffnet ist (sonst würde die IDE einen Konflikt
      * zwischen Datei und Editor melden), andernfalls atomar wie die Desktop-App und meldet es dem VFS.
+     *
+     * Hat sich das Dokument seit dem letzten Lesen oder Schreiben dieser Oberfläche geändert (Text-Tab, Git,
+     * zweiter LatherIt-Tab), wird nicht geschrieben, sondern neu geladen - sonst überschriebe das
+     * verzögerte automatische Speichern die fremde Änderung mit dem alten Stand.
      */
     private fun writeTextFile(path: String, content: String) {
-        val nioPath = Path.of(path)
-        val file = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(nioPath)
+        val file = findFile(Path.of(path))
+        val nioPath = file?.toNioPath() ?: Path.of(path)
         val document = file?.let { FileDocumentManager.getInstance().getCachedDocument(it) }
         if (document != null) {
             val text = StringUtil.convertLineSeparators(content)
+            var conflict = false
             ApplicationManager.getApplication().invokeAndWait({
+                val known = knownStamps[document]
+                if (known != null && known != document.modificationStamp) {
+                    conflict = true
+                    return@invokeAndWait
+                }
                 // Auch das Speichern zählt als eigene Änderung: Die IDE kann dabei z. B. einen
                 // Zeilenumbruch am Dateiende ergänzen, das soll die Oberfläche nicht neu laden.
                 ownWrites.add(document)
@@ -94,10 +154,15 @@ class HostCommands(private val project: Project, private val file: VirtualFile, 
                         })
                     }
                     FileDocumentManager.getInstance().saveDocument(document)
+                    knownStamps[document] = document.modificationStamp
                 } finally {
                     ownWrites.remove(document)
                 }
             }, ModalityState.defaultModalityState())
+            if (conflict) {
+                reload()
+                throw HostException("${nioPath.fileName} wurde außerhalb von LatherIt geändert - nicht gespeichert, die Ansicht lädt neu")
+            }
             return
         }
         try {
@@ -176,11 +241,6 @@ class HostCommands(private val project: Project, private val file: VirtualFile, 
         get(name)?.takeUnless { it.isJsonNull }?.asString
 
     companion object {
-        /** Dokumente, die gerade von der Oberfläche selbst geschrieben werden (nur auf dem EDT benutzt). */
-        private val ownWrites = mutableSetOf<Document>()
-
-        fun isOwnWrite(document: Document): Boolean = document in ownWrites
-
         /** Fehlertext für die Oberfläche. */
         fun describe(error: Throwable): String {
             val cause = if (error is CompletionException) error.cause ?: error else error

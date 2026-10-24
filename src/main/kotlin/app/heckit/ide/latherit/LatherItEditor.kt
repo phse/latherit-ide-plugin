@@ -2,6 +2,7 @@ package app.heckit.ide.latherit
 
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorState
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
@@ -15,10 +16,21 @@ import javax.swing.JComponent
  * selbst (kurz nach jeder Änderung), daher gilt der Editor nie als ungespeichert.
  */
 class LatherItEditor(project: Project, private val file: VirtualFile) : UserDataHolderBase(), FileEditor {
-    private val view = if (JBCefApp.isSupported()) LatherItView(project, file, this) else null
+    /**
+     * Ohne JCEF gibt es keine Oberfläche. Scheitert das Anlegen (z. B. wenn der Browser-Prozess der IDE
+     * abgestürzt ist), statt eines fehlenden Tabs einen Hinweis zeigen.
+     */
+    private val view: LatherItView? = if (JBCefApp.isSupported()) {
+        runCatching { LatherItView(project, file, this) }
+            .onFailure { thisLogger().warn("LatherIt-Oberfläche konnte nicht starten", it) }
+            .getOrNull()
+    } else {
+        null
+    }
 
-    private val component: JComponent =
-        view?.component ?: JBPanelWithEmptyText().withEmptyText(LatherItBundle.message("jcef.unavailable"))
+    private val component: JComponent = view?.component ?: JBPanelWithEmptyText().withEmptyText(
+        LatherItBundle.message(if (JBCefApp.isSupported()) "jcef.failed" else "jcef.unavailable"),
+    )
 
     override fun getComponent(): JComponent = component
 

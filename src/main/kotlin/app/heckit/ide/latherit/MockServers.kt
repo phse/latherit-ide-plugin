@@ -42,6 +42,9 @@ class MockAnswer(
  * Die Mocks gehören zum Editor-Tab, der sie gestartet hat, und enden mit ihm ([stopAll]).
  */
 class MockServers(private val emit: (event: String, payload: Any) -> Unit) {
+    /** Wie lange auf die Antwort der Oberfläche gewartet wird (Mock-Responses können Verzögerungen haben). */
+    internal var responseTimeoutMs = 120_000L
+
     private class Running(val server: HttpServer, val executor: ExecutorService)
 
     private val running = ConcurrentHashMap<String, Running>()
@@ -110,7 +113,7 @@ class MockServers(private val emit: (event: String, payload: Any) -> Unit) {
             ),
         )
         val answer = try {
-            future.get(RESPONSE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            future.get(responseTimeoutMs, TimeUnit.MILLISECONDS)
         } catch (_: TimeoutException) {
             null
         } catch (_: InterruptedException) {
@@ -137,9 +140,4 @@ class MockServers(private val emit: (event: String, payload: Any) -> Unit) {
 
     private fun plain(exchange: HttpExchange, status: Int, text: String) =
         send(exchange, status, listOf(listOf("Content-Type", "text/plain; charset=utf-8")), text)
-
-    companion object {
-        /** Wie lange auf die Antwort der Oberfläche gewartet wird (Mock-Responses können Verzögerungen haben). */
-        private const val RESPONSE_TIMEOUT_SECONDS = 120L
-    }
 }

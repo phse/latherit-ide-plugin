@@ -9,7 +9,7 @@
   right inside your IDE. Open a <code>*.latherit.yaml</code> project file and it shows up as a LatherIt editor.
 </p>
 
-<p><b>Preview:</b> the LatherIt user interface is currently available in German only.</p>
+<p><b>Note:</b> the LatherIt user interface is currently available in German only.</p>
 
 <h3>Features</h3>
 <ul>
@@ -20,6 +20,8 @@
   <li>Authentication: Basic, Bearer, Digest and NTLM.</li>
   <li>Property expansion like SoapUI (<code>${#Project#name}</code>, <code>${#Env#NAME}</code>, inline scripts).</li>
   <li>Import SoapUI projects.</li>
+  <li>Tabs, breadcrumb navigation and Go to (Cmd+P / Ctrl+P) across all open projects; Board and Collections for
+      the requests you use most.</li>
   <li>Project files are plain YAML, made for version control, and saved automatically like any other file in the IDE.</li>
   <li>HTTPS trusts the certificates of your operating system, like your browser does.</li>
 </ul>
@@ -28,7 +30,7 @@
 <ul>
   <li><b>File | New | LatherIt Project</b> creates a project file, <b>File | New | LatherIt Project from SoapUI…</b>
       imports a SoapUI project (<code>*-soapui-project.xml</code>).</li>
-  <li>Open any <code>*.latherit.yaml</code> file: the <b>LatherIt</b> tab shows the client, the <b>Text</b> tab the YAML.</li>
+  <li>Open any <code>*.latherit.yaml</code> (or <code>.yml</code>) file: the <b>LatherIt</b> tab shows the client, the <b>Text</b> tab the YAML.</li>
 </ul>
 
 <p>Like LatherIt? You can <a href="https://ko-fi.com/phse_de">buy me a coffee on Ko-fi</a>. It helps keep it free and maintained. More tools at <a href="https://heckit.app">heckit.app</a>.</p>
@@ -44,7 +46,15 @@
     <extensions defaultExtensionNs="com.intellij">
         <fileEditorProvider implementation="app.heckit.ide.latherit.LatherItEditorProvider"/>
         <stripTrailingSpacesFilterFactory implementation="app.heckit.ide.latherit.LatherItStripFilterFactory"/>
+        <actionPromoter implementation="app.heckit.ide.latherit.LatherItShortcutPromoter"/>
     </extensions>
+
+    <projectListeners>
+        <listener class="app.heckit.ide.latherit.LatherItOpenListener"
+                  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+        <listener class="app.heckit.ide.latherit.LatherItCloseListener"
+                  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener$Before"/>
+    </projectListeners>
 
     <actions>
         <action id="LatherIt.NewProject" class="app.heckit.ide.latherit.NewLatherItProjectAction" icon="/icons/latherit.svg">

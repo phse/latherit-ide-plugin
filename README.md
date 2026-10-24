@@ -39,7 +39,7 @@ foojay if needed.
 ```
 ./gradlew runIde        # start a sandbox IDE with the plugin
 ./gradlew buildPlugin   # build/distributions/latherit-ide-plugin-<version>.zip
-./gradlew test          # unit tests (authentication, mock server)
+./gradlew test          # tests: commands, saving, HTTP, authentication, mock server, web resources
 ```
 
 Verify against the target platform:

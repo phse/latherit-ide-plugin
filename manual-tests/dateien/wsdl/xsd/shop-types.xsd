@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:shop="http://example.com/shop/types"
+    targetNamespace="http://example.com/shop/types"
+    elementFormDefault="qualified">
+  <xs:include schemaLocation="common.xsd"/>
+  <xs:element name="Session" type="xs:string"/>
+  <xs:element name="GetOrder">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="orderId" type="xs:long"/>
+        <xs:element name="includeItems" type="xs:boolean" minOccurs="0"/>
+        <xs:choice>
+          <xs:element name="customerNo" type="xs:string"/>
+          <xs:element name="email" type="xs:string"/>
+        </xs:choice>
+        <xs:element name="filter" type="shop:ItemFilter" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="shop:Category" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetOrderResponse" type="shop:Order"/>
+  <xs:complexType name="BaseEntity">
+    <xs:sequence><xs:element name="id" type="xs:string"/></xs:sequence>
+    <xs:attributeGroup ref="shop:Audit"/>
+  </xs:complexType>
+  <xs:complexType name="Order">
+    <xs:complexContent>
+      <xs:extension base="shop:BaseEntity">
+        <xs:sequence>
+          <xs:element name="amount" type="shop:Money"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Money">
+    <xs:simpleContent>
+      <xs:extension base="xs:decimal"><xs:attribute name="currency" type="xs:string" use="required"/></xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:attributeGroup name="Audit"><xs:attribute name="createdBy" type="xs:string"/></xs:attributeGroup>
+</xs:schema>

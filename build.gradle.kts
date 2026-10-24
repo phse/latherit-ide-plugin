@@ -1,4 +1,5 @@
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import java.util.Properties
 
 plugins {
@@ -37,8 +38,11 @@ dependencies {
             create(IntelliJPlatformType.PhpStorm, providers.gradleProperty("platformVersion").get())
         }
         bundledPlugin("com.intellij.modules.jcef")
+        // Für Tests mit echter IDE-Umgebung (Dokumente, VFS, Befehle), siehe HostCommandsTest
+        testFramework(TestFrameworkType.Platform)
     }
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.opentest4j:opentest4j:1.3.0")
 }
 
 intellijPlatform {
@@ -49,6 +53,23 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>1.0.0</h3>
+            <ul>
+              <li>Tabs for open requests, tests and mocks: pin, rename, reorder by dragging, close from the context menu,
+                  switch with Ctrl+Tab; a list of all tabs when they don't fit.</li>
+              <li>Breadcrumb navigation above the editor (like the IDE's), back and forward, Go to (Cmd+P) across all
+                  open projects, reveal the selection in the tree.</li>
+              <li>Collapsible tree with a slim navigation bar; Board and Collections (stored in the project file) in the sidebar; <code>*.latherit.yml</code> opens too.</li>
+              <li>Create items from the context menu: requests, test suites, cases and steps, mock services and more.</li>
+              <li>Copy the JSONPath or XPath of the element under the cursor from the editor's context menu.</li>
+              <li>Smooth scrolling everywhere and no more lag when changing direction.</li>
+              <li>Editor: word-wise navigation, move lines, comments, multiple cursors, find and replace;
+                  Reformat Code shortcut formats the body; Find in Files, tree filter and Go to use the selected text.</li>
+              <li>Binary responses show a short note instead of garbled text; clearer XPath Match messages.</li>
+              <li>REST requests keep a clean address when it was pasted with trailing punctuation.</li>
+              <li>Opening a project shows a loading indicator instead of empty or intermediate screens.</li>
+              <li>Coloured feedback for tree actions; status dots on tabs, tree and board.</li>
+            </ul>
             <h3>0.2.2</h3>
             <ul>
               <li>New plugin icon.</li>
@@ -90,6 +111,8 @@ intellijPlatform {
     pluginVerification {
         ides {
             platformLocalPath?.let { local(it) }
+            // Neueste EAP: Der Marketplace prüft auch neuere Builds und meldet dort Deprecations
+            create(IntelliJPlatformType.PhpStorm, providers.gradleProperty("verifyNewestVersion").get())
         }
     }
 }

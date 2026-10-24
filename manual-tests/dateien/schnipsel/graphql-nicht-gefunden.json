@@ -1,0 +1,4 @@
+{
+  "query": "query Bestellung($id: ID!) { order(id: $id) { id status } }",
+  "variables": { "id": "9999" }
+}

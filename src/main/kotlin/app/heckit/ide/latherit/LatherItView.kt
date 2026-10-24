@@ -6,21 +6,29 @@ import com.google.gson.JsonParser
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.CustomShortcutSet
+import com.intellij.openapi.actionSystem.IdeActions
+import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.JBColor
+import com.intellij.ui.components.JBLoadingPanel
+import java.awt.BorderLayout
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
 import org.cef.browser.CefBrowser
+import org.cef.callback.CefContextMenuParams
+import org.cef.callback.CefMenuModel
+import org.cef.handler.CefContextMenuHandlerAdapter
 import org.cef.handler.CefLifeSpanHandlerAdapter
+import org.cef.browser.CefFrame
 import java.awt.Toolkit
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
@@ -34,20 +42,33 @@ import javax.swing.KeyStroke
  * aus ([HostCommands]) und meldet das Ergebnis per `_settle` zurück.
  */
 class LatherItView(private val project: Project, private val file: VirtualFile, parent: Disposable) : Disposable {
-    private val browser = JBCefBrowser.createBuilder()
-        // Natives Fenster statt Offscreen-Rendering: Nur so kommen Trackpad- und Mausrad-Ereignisse
-        // unverfälscht an (offscreen rechnet Swing sie um - der Text sprang und scrollte nach).
-        .setOffScreenRendering(false)
-        .build()
+    // Seit 2026.x läuft JCEF im Remote-Modus und rendert immer offscreen - setOffScreenRendering(false)
+    // würde nur ignoriert (mit Warnung im Log). Das Mausrad glättet die Oberfläche selbst, mit nur passiven
+    // Listenern (siehe lib/smoothWheel.ts und lib/monacoWheel.ts im Web-Projekt).
+    private val browser = JBCefBrowser.createBuilder().build()
     private val query = JBCefJSQuery.create(browser as JBCefBrowserBase)
     private val mocks = MockServers(::emit)
-    private val commands = HostCommands(project, file, mocks)
+    private val commands = HostCommands(project, file, mocks, reload = ::reloadLater, ready = { loading.stopLoading() })
+
+    /**
+     * Ladekreis bis die Oberfläche gezeichnet ist (wie die Markdown-Vorschau) - sonst ist beim Öffnen erst
+     * eine leere Fläche und kurz das leere Editor-„Dashboard“ der IDE zu sehen.
+     */
+    private val loading = JBLoadingPanel(BorderLayout(), this).apply {
+        // Deckend in der Farbe der Oberfläche (--surface in src/styles.css): Durch das durchsichtige
+        // Panel schien sonst das leere Editor-„Dashboard“ der IDE unter dem Ladekreis durch.
+        isOpaque = true
+        background = JBColor(0xFFFFFF, 0x1E1E20)
+        add(browser.component)
+        startLoading()
+    }
+
     private val gson = Gson()
 
     /** Die Datei wurde außerhalb der Oberfläche geändert (Text-Tab, Git, …), während sie nicht sichtbar war. */
     private var changedElsewhere = false
 
-    val component: JComponent get() = browser.component
+    val component: JComponent get() = loading
 
     init {
         Disposer.register(parent, this)
@@ -65,6 +86,7 @@ class LatherItView(private val project: Project, private val file: VirtualFile, 
         browser.jbCefClient.addLifeSpanHandler(object : CefLifeSpanHandlerAdapter() {
             override fun onAfterCreated(cefBrowser: CefBrowser?) = applyTheme()
         }, browser.cefBrowser)
+        browser.jbCefClient.addContextMenuHandler(BrowserMenuCleanup, browser.cefBrowser)
         ApplicationManager.getApplication().messageBus.connect(this)
             .subscribe(LafManagerListener.TOPIC, LafManagerListener { applyTheme() })
         installShortcuts()
@@ -93,8 +115,18 @@ class LatherItView(private val project: Project, private val file: VirtualFile, 
     fun reloadIfChangedElsewhere() {
         if (!changedElsewhere) return
         changedElsewhere = false
-        browser.cefBrowser.reload()
+        reloadProject()
     }
+
+    /** Die Oberfläche hat einen veralteten Stand: sofort neu laden, wenn sichtbar, sonst beim nächsten Anzeigen. */
+    private fun reloadLater() {
+        ApplicationManager.getApplication().invokeLater {
+            if (component.isShowing) reloadProject() else changedElsewhere = true
+        }
+    }
+
+    /** Die Oberfläche liest die Projektdatei neu - ohne die Seite neu zu laden (das flackert und schließt Dialoge). */
+    private fun reloadProject() = emit("reload-project", null)
 
     /** Ereignis an die Oberfläche (siehe `onIdeEvent` in src/lib/ide.ts). */
     fun emit(event: String, payload: Any?) {
@@ -188,13 +220,43 @@ class LatherItView(private val project: Project, private val file: VirtualFile, 
             "importWsdl" to KeyStroke.getKeyStroke(KeyEvent.VK_I, mod),
             "newRest" to KeyStroke.getKeyStroke(KeyEvent.VK_N, mod or shift),
             "board" to KeyStroke.getKeyStroke(KeyEvent.VK_B, mod),
-            "filter" to KeyStroke.getKeyStroke(KeyEvent.VK_F, mod or shift),
+            // ⇧⌘F: Find in Files der IDE - über die Oberfläche, die den markierten Text mitgibt
+            "findInFiles" to KeyStroke.getKeyStroke(KeyEvent.VK_F, mod or shift),
+            "filter" to KeyStroke.getKeyStroke(KeyEvent.VK_F, mod or InputEvent.ALT_DOWN_MASK),
             "focusTree" to KeyStroke.getKeyStroke(KeyEvent.VK_1, mod),
             "focusEditor" to KeyStroke.getKeyStroke(KeyEvent.VK_2, mod),
-        )
+            "selectAll" to KeyStroke.getKeyStroke(KeyEvent.VK_A, mod),
+            "undo" to KeyStroke.getKeyStroke(KeyEvent.VK_Z, mod),
+            "redo" to KeyStroke.getKeyStroke(KeyEvent.VK_Z, mod or shift),
+            "format" to KeyStroke.getKeyStroke(KeyEvent.VK_F, shift or InputEvent.ALT_DOWN_MASK),
+            "insertProperty" to KeyStroke.getKeyStroke(KeyEvent.VK_P, mod or shift),
+            "extractProperty" to KeyStroke.getKeyStroke(KeyEvent.VK_V, mod or shift),
+            "quickOpen" to KeyStroke.getKeyStroke(KeyEvent.VK_P, mod),
+            "back" to KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, mod or InputEvent.ALT_DOWN_MASK),
+            "forward" to KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, mod or InputEvent.ALT_DOWN_MASK),
+            "reveal" to KeyStroke.getKeyStroke(KeyEvent.VK_F1, InputEvent.ALT_DOWN_MASK),
+            // Tabs der Oberfläche: wechseln wie im Browser, ⌘W schließt den Tab (ohne Tab den Editor)
+            "nextTab" to KeyStroke.getKeyStroke(KeyEvent.VK_TAB, InputEvent.CTRL_DOWN_MASK),
+            "previousTab" to KeyStroke.getKeyStroke(KeyEvent.VK_TAB, InputEvent.CTRL_DOWN_MASK or shift),
+            "nextTab" to KeyStroke.getKeyStroke(KeyEvent.VK_PAGE_DOWN, InputEvent.CTRL_DOWN_MASK),
+            "previousTab" to KeyStroke.getKeyStroke(KeyEvent.VK_PAGE_UP, InputEvent.CTRL_DOWN_MASK),
+            "closeTab" to KeyStroke.getKeyStroke(KeyEvent.VK_W, mod),
+        ) + if (SystemInfo.isMac) {
+            // ⌘↑ ist auf dem Mac die Navigationsleiste der IDE; sonst Strg+Pos1 (geht ohnehin)
+            listOf("jumpToStart" to KeyStroke.getKeyStroke(KeyEvent.VK_UP, mod))
+        } else {
+            listOf("redo" to KeyStroke.getKeyStroke(KeyEvent.VK_Y, mod))
+        }
         for ((name, keyStroke) in shortcuts) {
-            DumbAwareAction.create { emit("shortcut", name) }
+            LatherItShortcutAction(name) { emit("shortcut", it) }
                 .registerCustomShortcutSet(CustomShortcutSet(keyStroke), browser.component, this)
+        }
+        // Formatieren auch mit dem Kürzel der IDE (Reformat Code, ⌥⌘L in der Standard-Keymap) - aus der
+        // aktiven Keymap, damit es auch mit VSCode-, Eclipse- oder eigener Belegung passt
+        val reformat = KeymapManager.getInstance().activeKeymap.getShortcuts(IdeActions.ACTION_EDITOR_REFORMAT)
+        if (reformat.isNotEmpty()) {
+            LatherItShortcutAction("format") { emit("shortcut", it) }
+                .registerCustomShortcutSet(CustomShortcutSet(*reformat), browser.component, this)
         }
     }
 
@@ -203,8 +265,8 @@ class LatherItView(private val project: Project, private val file: VirtualFile, 
         val document = FileDocumentManager.getInstance().getDocument(file) ?: return
         document.addDocumentListener(object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {
-                if (HostCommands.isOwnWrite(document)) return
-                if (component.isShowing) browser.cefBrowser.reload() else changedElsewhere = true
+                if (commands.isOwnWrite(document)) return
+                if (component.isShowing) reloadProject() else changedElsewhere = true
             }
         }, this)
     }
@@ -213,5 +275,36 @@ class LatherItView(private val project: Project, private val file: VirtualFile, 
 
     private companion object {
         var screenshotsStarted = false
+    }
+}
+
+/**
+ * Chromiums eigenes Kontextmenü zeigt Browser-Befehle (Zurück, Neu laden, Drucken …, Seitenquelltext), die in
+ * der eingebetteten Oberfläche nichts verloren haben. Übrig bleiben nur Bearbeiten-Befehle in Eingabefeldern
+ * und an markiertem Text; ist dann nichts mehr übrig, erscheint gar kein Menü.
+ */
+private object BrowserMenuCleanup : CefContextMenuHandlerAdapter() {
+    private val browserCommands = setOf(
+        CefMenuModel.MenuId.MENU_ID_BACK,
+        CefMenuModel.MenuId.MENU_ID_FORWARD,
+        CefMenuModel.MenuId.MENU_ID_RELOAD,
+        CefMenuModel.MenuId.MENU_ID_RELOAD_NOCACHE,
+        CefMenuModel.MenuId.MENU_ID_STOPLOAD,
+        CefMenuModel.MenuId.MENU_ID_PRINT,
+        CefMenuModel.MenuId.MENU_ID_VIEW_SOURCE,
+    )
+
+    override fun onBeforeContextMenu(browser: CefBrowser?, frame: CefFrame?, params: CefContextMenuParams?, model: CefMenuModel?) {
+        model ?: return
+        for (i in model.count - 1 downTo 0) {
+            if (model.getCommandIdAt(i) in browserCommands) model.removeAt(i)
+        }
+        // Übrig gebliebene Trennlinien am Anfang, am Ende und doppelte entfernen
+        for (i in model.count - 1 downTo 0) {
+            val separator = model.getTypeAt(i) == CefMenuModel.MenuItemType.MENUITEMTYPE_SEPARATOR
+            val redundant = i == 0 || i == model.count - 1 ||
+                model.getTypeAt(i - 1) == CefMenuModel.MenuItemType.MENUITEMTYPE_SEPARATOR
+            if (separator && redundant) model.removeAt(i)
+        }
     }
 }

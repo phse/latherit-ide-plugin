@@ -1,0 +1,8 @@
+{
+  "customer": "C-1007",
+  "note": "Grüße aus Köln – ${#Project#name}",
+  "items": [
+    { "sku": "TEA-GREEN-100", "quantity": 2 },
+    { "sku": "MUG-STONE", "quantity": 1 }
+  ]
+}

@@ -1,0 +1,4 @@
+{
+  "query": "mutation($c: String!) { createOrder(customer: $c) { id customer status } }",
+  "variables": { "c": "${#Project#kunde}" }
+}

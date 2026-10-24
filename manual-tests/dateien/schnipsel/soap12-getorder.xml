@@ -1,0 +1,12 @@
+<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope"
+               xmlns:shop="http://example.com/shop/types">
+   <soap:Header>
+      <shop:Session>${#Project#session}</shop:Session>
+   </soap:Header>
+   <soap:Body>
+      <shop:GetOrder version="1">
+         <shop:orderId>4711</shop:orderId>
+         <shop:customerNo>C-1007</shop:customerNo>
+      </shop:GetOrder>
+   </soap:Body>
+</soap:Envelope>

@@ -1,0 +1,8 @@
+${=new Date().format("yyyy-MM-dd")}
+${=new Date().plus(1).format("dd.MM.yyyy")}
+${=UUID.randomUUID()}
+${=System.currentTimeMillis()}
+${=new Random().nextInt(1000)}
+${#System#user.home}
+${#System#os.name}
+${#Env#LATHERIT_TEST}
