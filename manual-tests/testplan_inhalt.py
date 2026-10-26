@@ -1665,8 +1665,12 @@ KAPITEL = [
                         "erwartet": ["Alle Kürzel wirken, Umlaute bleiben beim Kopieren erhalten, Scrollen ohne Ruckeln."],
                     },
                     {
-                        "id": "DT-07", "titel": "Hell und dunkel", "tag": "neu 25.10.",
-                        "schritte": ["Im System zwischen hellem und dunklem Design wechseln, während LatherIt offen ist."],
+                        "id": "DT-07", "titel": "Hell und dunkel", "tag": "geändert 26.10.",
+                        "schritte": [
+                            "LatherIt offen lassen und im System das Design wechseln (nicht „Nachtmodus“, der färbt nur wärmer). "
+                            "Ubuntu: *Einstellungen › Darstellung › Stil: Hell / Dunkel*. "
+                            "Windows: *Einstellungen › Personalisierung › Farben › Modus: Hell / Dunkel*.",
+                        ],
                         "erwartet": ["LatherIt wechselt mit, auch Editor und Fensterrahmen; alles bleibt lesbar."],
                     },
                     {
