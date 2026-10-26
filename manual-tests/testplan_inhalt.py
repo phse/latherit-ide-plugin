@@ -1587,31 +1587,63 @@ KAPITEL = [
                         ],
                     },
                     {
-                        "id": "DT-02", "titel": "Projekt öffnen und speichern", "tag": "neu 25.10.",
+                        "id": "DT-02", "titel": "Projekt öffnen und speichern", "tag": "geändert 26.10.",
+                        "vorher": "Auf dem Mac: Dateiserver für die Handtest-Dateien läuft (im Ordner `manual-tests/dateien`: `python3 -m http.server 8001`).",
                         "schritte": [
-                            "`shop-api.latherit.yaml` über *Projekt öffnen* (Strg+O) wählen.",
-                            "Einen Request umbenennen, Strg+S, App schließen und neu starten.",
+                            ("Projekt in die VM holen - Ubuntu im Terminal (Strg+Alt+T), Windows im Browser (Adresse aufrufen, Datei speichern):",
+                             "wget -P ~/Dokumente http://192.168.64.1:8001/projekte/shop-api.latherit.yaml"),
+                            "In LatherIt Strg+O, `shop-api.latherit.yaml` wählen.",
+                            "Im Baum einen Request anklicken, F2 (oder Doppelklick auf den Namen), neuen Namen eingeben, Enter. Dann Strg+S.",
+                            "LatherIt schließen und wieder starten.",
                         ],
                         "erwartet": [
-                            "Projekt erscheint im Baum, der Dateidialog ist der des Systems.",
-                            "Nach dem Neustart ist das Projekt wieder offen und die Umbenennung gespeichert.",
+                            "Der Dateidialog ist der des Systems; das Projekt erscheint im Baum.",
+                            "Nach dem Neustart ist das Projekt wieder offen und der neue Name gespeichert.",
                         ],
                     },
                     {
-                        "id": "DT-03", "titel": "REST und SOAP senden", "tag": "neu 25.10.",
-                        "schritte": ["R-01 und W-11 gegen den Testserver auf dem Mac (`--host 0.0.0.0`, Adresse des Macs statt localhost)."],
-                        "erwartet": ["Antworten wie dort beschrieben, Statuszeile mit Zeit und Größe."],
-                    },
-                    {
-                        "id": "DT-04", "titel": "HTTPS mit eigenem Zertifikat", "tag": "neu 25.10.",
-                        "schritte": ["GET `https://<mac>:8443/api/orders/4711`, die Nachfrage zum Zertifikat bestätigen."],
-                        "erwartet": ["Nachfrage erscheint einmal, danach Antwort 200 ohne erneute Nachfrage."],
-                    },
-                    {
-                        "id": "DT-05", "titel": "Mock starten", "tag": "neu 25.10.",
-                        "schritte": ["M-01, dann den Mock aus einem Browser in der VM aufrufen."],
+                        "id": "DT-03", "titel": "REST und SOAP senden", "tag": "geändert 26.10.",
+                        "vorher": "Auf dem Mac läuft der Testserver für das Netz: `python3 testserver.py --host 0.0.0.0`. "
+                                  "Der Mac ist aus der VM unter `192.168.64.1` erreichbar (nicht `localhost`).",
+                        "schritte": [
+                            ("REST: Strg+Umschalt+N, Methode GET, Adresse eingeben, *Anlegen*, dann Strg+Enter:",
+                             "http://192.168.64.1:8088/api/orders/4711"),
+                            ("WSDL: Strg+I, Adresse eingeben, *Importieren*:", "http://192.168.64.1:8088/shop?wsdl"),
+                            ("Im Baum *ShopSoap11 › GetOrder › Request 1* wählen. Endpunkt oben auf diese Adresse setzen, dann Strg+Enter:",
+                             "http://192.168.64.1:8088/shop"),
+                        ],
                         "erwartet": [
-                            "Mock antwortet. Windows: Die Firewall fragt beim ersten Start nach - mit *Abbrechen* bleibt er lokal erreichbar.",
+                            "REST: Status 200, JSON mit `\"id\": \"4711\"`; die Statuszeile zeigt Zeit und Größe.",
+                            "WSDL: Im Baum erscheinen `ShopSoap11` und `ShopSoap12` mit `GetOrder` und `Ping`.",
+                            "SOAP: Status 200, Antwort mit `<shop:id>4711</shop:id>`.",
+                        ],
+                    },
+                    {
+                        "id": "DT-04", "titel": "HTTPS mit eigenem Zertifikat", "tag": "geändert 26.10.",
+                        "vorher": "Testserver wie in DT-03.",
+                        "schritte": [
+                            ("Strg+Umschalt+N, Methode GET, Adresse eingeben, *Anlegen*, Strg+Enter:",
+                             "https://192.168.64.1:8443/api/orders/4711"),
+                            "Die Nachfrage zum Zertifikat mit *Vertrauen* bzw. *Akzeptieren* bestätigen.",
+                            "Strg+Enter ein zweites Mal.",
+                        ],
+                        "erwartet": [
+                            "Die Nachfrage erscheint einmal, danach Status 200.",
+                            "Beim zweiten Senden keine Nachfrage mehr.",
+                        ],
+                    },
+                    {
+                        "id": "DT-05", "titel": "Mock starten", "tag": "geändert 26.10.",
+                        "vorher": "Projekt aus DT-02 offen.",
+                        "schritte": [
+                            "Im Baum *Shop Mock* wählen, oben rechts **Starten** (oder Strg+Enter).",
+                            ("Im Browser der VM aufrufen:", "http://localhost:8099/shop/orders/4711"),
+                            "Im Mock-Protokoll in LatherIt nachsehen, dann **Stoppen**.",
+                        ],
+                        "erwartet": [
+                            "Der Browser zeigt eine Bestellung mit `\"id\": \"4711\"`; das Protokoll zeigt den Aufruf.",
+                            "Windows: Die Firewall fragt beim ersten Start - *Abbrechen* reicht (Mock bleibt in der VM erreichbar).",
+                            "Nach Stoppen: Neu laden im Browser schlägt fehl (Verbindung abgelehnt).",
                         ],
                     },
                     {
