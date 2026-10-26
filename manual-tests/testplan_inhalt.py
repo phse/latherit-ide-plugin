@@ -1674,10 +1674,10 @@ KAPITEL = [
                         "erwartet": ["LatherIt wechselt mit, auch Editor und Fensterrahmen; alles bleibt lesbar."],
                     },
                     {
-                        "id": "DT-08", "titel": "Beenden und Deinstallieren", "tag": "neu 25.10.",
+                        "id": "DT-08", "titel": "Beenden und Deinstallieren", "tag": "geändert 26.10.",
                         "schritte": [
                             "Mit ungespeicherter Änderung Alt+F4 bzw. das Schließen-Kreuz drücken.",
-                            "Windows: über *Einstellungen › Apps* deinstallieren; Linux: `sudo apt remove latherit`.",
+                            "Windows: über *Einstellungen › Apps* deinstallieren; Linux: `sudo apt remove lather-it` (Paketname mit Bindestrich).",
                         ],
                         "erwartet": [
                             "Nachfrage zum Speichern erscheint, danach schließt die App vollständig (kein Prozess bleibt im Task-Manager bzw. `ps`).",
