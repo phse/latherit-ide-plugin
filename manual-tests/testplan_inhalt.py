@@ -1622,16 +1622,23 @@ KAPITEL = [
                     },
                     {
                         "id": "DT-04", "titel": "HTTPS mit eigenem Zertifikat", "tag": "geändert 26.10.",
+                        "ziel": "Die Desktop-App fragt nicht nach (anders als die IDE), sondern prüft gegen die "
+                                "vertrauenswürdigen Zertifikate des Systems - wie ein Browser.",
                         "vorher": "Testserver wie in DT-03.",
                         "schritte": [
                             ("Strg+Umschalt+N, Methode GET, Adresse eingeben, *Anlegen*, Strg+Enter:",
                              "https://192.168.64.1:8443/api/orders/4711"),
-                            "Die Nachfrage zum Zertifikat mit *Vertrauen* bzw. *Akzeptieren* bestätigen.",
-                            "Strg+Enter ein zweites Mal.",
+                            ("Testzertifikat dem System bekannt machen - Ubuntu im Terminal:",
+                             "wget -O /tmp/latherit-test.crt http://192.168.64.1:8001/zertifikat/localhost.pem\n"
+                             "sudo cp /tmp/latherit-test.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates"),
+                            ("Windows: Datei im Browser laden (`http://192.168.64.1:8001/zertifikat/localhost.pem`), dann "
+                             "Startmenü › „Terminal“ › Rechtsklick › *Als Administrator ausführen*:",
+                             "certutil -addstore -f Root $HOME\\Downloads\\localhost.pem"),
+                            "LatherIt beenden und neu starten, den Request erneut senden.",
                         ],
                         "erwartet": [
-                            "Die Nachfrage erscheint einmal, danach Status 200.",
-                            "Beim zweiten Senden keine Nachfrage mehr.",
+                            "Erster Versuch: verständliche Fehlermeldung (Zertifikat nicht vertrauenswürdig), kein Absturz.",
+                            "Nach dem Eintragen und Neustart: Status 200.",
                         ],
                     },
                     {
