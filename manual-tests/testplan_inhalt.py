@@ -1609,8 +1609,10 @@ KAPITEL = [
                             ("REST: Strg+Umschalt+N, Methode GET, Adresse eingeben, *Anlegen*, dann Strg+Enter:",
                              "http://192.168.64.1:8088/api/orders/4711"),
                             ("WSDL: Strg+I, Adresse eingeben, *Importieren*:", "http://192.168.64.1:8088/shop?wsdl"),
-                            ("Im Baum *ShopSoap11 › GetOrder › Request 1* wählen. Endpunkt oben auf diese Adresse setzen, dann Strg+Enter:",
+                            ("Im Baum *ShopSoap11 › GetOrder › Request 1* wählen. Endpunkt oben auf diese Adresse setzen:",
                              "http://192.168.64.1:8088/shop"),
+                            "Im Body in der Zeile `<shop:orderId>?</shop:orderId>` das `?` durch `4711` ersetzen "
+                            "(die übrigen `?` dürfen bleiben), dann Strg+Enter.",
                         ],
                         "erwartet": [
                             "REST: Status 200, JSON mit `\"id\": \"4711\"`; die Statuszeile zeigt Zeit und Größe.",
