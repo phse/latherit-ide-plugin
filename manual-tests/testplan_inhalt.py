@@ -1669,7 +1669,9 @@ KAPITEL = [
                         "schritte": [
                             "LatherIt offen lassen und im System das Design wechseln (nicht „Nachtmodus“, der färbt nur wärmer). "
                             "Ubuntu: *Einstellungen › Darstellung › Stil: Hell / Dunkel*. "
-                            "Windows: *Einstellungen › Personalisierung › Farben › Modus: Hell / Dunkel*.",
+                            "Windows: *Einstellungen › Personalisierung › Farben › Modus: Hell / Dunkel*. "
+                            "Ohne Aktivierung ist das gesperrt, dann in PowerShell (jeder Aufruf schaltet um): "
+                            "`irm http://192.168.64.1:8000/vms/windows-design.ps1 | iex`.",
                         ],
                         "erwartet": ["LatherIt wechselt mit, auch Editor und Fensterrahmen; alles bleibt lesbar."],
                     },
