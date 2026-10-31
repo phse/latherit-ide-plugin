@@ -1,5 +1,6 @@
 package app.heckit.ide.latherit
 
+import com.intellij.DynamicBundle
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -165,6 +166,7 @@ class LatherItView(private val project: Project, private val file: VirtualFile, 
           window.__latheritIde = {
             projectPath: ${gson.toJson(file.path)},
             importFrom: ${gson.toJson(consumeImport())},
+            locale: ${gson.toJson(DynamicBundle.getLocale().toLanguageTag())},
             call(command, args) {
               return new Promise((resolve, reject) => {
                 const id = nextId++

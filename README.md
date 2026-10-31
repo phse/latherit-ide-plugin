@@ -79,6 +79,9 @@ uploaded separately. `marketplace/plugin-icon.png` at the top of this README is 
    hand on the [Marketplace page](https://plugins.jetbrains.com/plugin/34776-latherit). JetBrains
    reviews every version before it is released.
 4. Tag the commit (`git tag v<version>`) and push.
+5. If `marketplace/custom-pages/` changed, paste the page into the Marketplace by hand (plugin page,
+   *Custom Pages* tab, Markdown). `publishPlugin` doesn't upload custom pages. `getting-started.md` is the
+   *Getting started* tab: project files, a quick first request, keyboard shortcuts.
 
 Signing is optional (variables `CERTIFICATE_CHAIN`, `PRIVATE_KEY`, `PRIVATE_KEY_PASSWORD`,
 see https://plugins.jetbrains.com/docs/intellij/plugin-signing.html).

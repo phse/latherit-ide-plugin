@@ -9,7 +9,7 @@
   right inside your IDE. Open a <code>*.latherit.yaml</code> project file and it shows up as a LatherIt editor.
 </p>
 
-<p><b>Note:</b> the LatherIt user interface is currently available in German only.</p>
+<p>The LatherIt user interface is available in English and German and follows the language of the IDE. It can be changed in LatherIt's settings.</p>
 
 <h3>Features</h3>
 <ul>
