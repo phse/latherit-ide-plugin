@@ -53,6 +53,12 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>1.1.0</h3>
+            <ul>
+              <li>English user interface. LatherIt follows the language of the IDE (English or German);
+                  it can be changed in LatherIt's settings.</li>
+              <li>Dates, times and sizes are formatted for the chosen language.</li>
+            </ul>
             <h3>1.0.0</h3>
             <ul>
               <li>Tabs for open requests, tests and mocks: pin, rename, reorder by dragging, close from the context menu,
