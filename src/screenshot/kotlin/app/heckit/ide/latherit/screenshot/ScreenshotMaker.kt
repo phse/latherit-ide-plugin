@@ -65,10 +65,10 @@ object ScreenshotMaker {
         Thread.sleep(1500)
         shot(frame, view, File(out, "01-request.png"))
 
-        js(view, "document.querySelector('button[title^=\"Response unter\"]').click()")
+        js(view, "document.querySelector('button[title^=\"Response unter\"], button[title^=\"Show response below\"]').click()")
         Thread.sleep(800)
         shot(frame, view, File(out, "02-stacked.png"))
-        js(view, "document.querySelector('button[title^=\"Response neben\"]').click()")
+        js(view, "document.querySelector('button[title^=\"Response neben\"], button[title^=\"Show response next\"]').click()")
 
         select(view, "req-orders-create")
         js(view, "document.querySelector('button.send').click()")
