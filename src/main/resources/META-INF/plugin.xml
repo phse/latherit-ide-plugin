@@ -35,6 +35,8 @@
 
 <p>Like LatherIt? You can support it via <a href="https://github.com/sponsors/phse">GitHub Sponsors</a> or <a href="https://ko-fi.com/phse_de">buy me a coffee on Ko-fi</a>. It helps keep it free and maintained. More tools at <a href="https://heckit.app">heckit.app</a>.</p>
 
+<p>Missing a feature, have an idea, or just want to share feedback? I would love to hear from you: <a href="mailto:plugin-latherit@heckit.app">plugin-latherit@heckit.app</a>.</p>
+
 <p><small>SoapUI is a trademark of SmartBear Software. LatherIt is not affiliated with or endorsed by SmartBear Software.</small></p>
 ]]></description>
 
@@ -44,6 +46,8 @@
     <resource-bundle>messages.LatherItBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
+        <!-- Fehler- und Freeze-Berichte der Nutzer landen im Marketplace (Reiter Freezes bzw. Errors). -->
+        <errorHandler implementation="com.intellij.diagnostic.JetBrainsMarketplaceErrorReportSubmitter"/>
         <fileEditorProvider implementation="app.heckit.ide.latherit.LatherItEditorProvider"/>
         <stripTrailingSpacesFilterFactory implementation="app.heckit.ide.latherit.LatherItStripFilterFactory"/>
         <actionPromoter implementation="app.heckit.ide.latherit.LatherItShortcutPromoter"/>

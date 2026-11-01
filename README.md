@@ -2,7 +2,7 @@
 
 <img src="marketplace/plugin-icon.png" width="360" alt="LatherIt icon for light and dark themes">
 
-Plugin ID `app.heckit.ide.latherit` · Vendor heck\it ([heckit.app](https://heckit.app)) · [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/34776-latherit) · Source: https://github.com/phse/latherit-ide-plugin · Support: [GitHub Sponsors](https://github.com/sponsors/phse) or [Ko-fi](https://ko-fi.com/phse_de)
+Plugin ID `app.heckit.ide.latherit` · Vendor heck\it ([heckit.app](https://heckit.app)) · [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/34776-latherit) · Source: https://github.com/phse/latherit-ide-plugin · Support: [GitHub Sponsors](https://github.com/sponsors/phse) or [Ko-fi](https://ko-fi.com/phse_de) · Feedback and feature requests: [plugin-latherit@heckit.app](mailto:plugin-latherit@heckit.app)
 
 ![LatherIt in PhpStorm](marketplace/screenshots/01-request.png)
 
