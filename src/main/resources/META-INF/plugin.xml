@@ -51,10 +51,12 @@
         <fileEditorProvider implementation="app.heckit.ide.latherit.LatherItEditorProvider"/>
         <fileEditorProvider implementation="app.heckit.ide.latherit.LatherItNodeEditorProvider"/>
         <editorTabTitleProvider implementation="app.heckit.ide.latherit.LatherItNodeTabTitleProvider"/>
+        <!-- New UI: Tool-Window-Icon in 20 px bzw. 16 px (Compact Mode), klassisch 13 px -->
+        <iconMapper mappingFile="LatherItIconMappings.json"/>
         <fileIconProvider implementation="app.heckit.ide.latherit.LatherItNodeIconProvider"/>
         <projectConfigurable parentId="tools" id="app.heckit.ide.latherit.settings" bundle="messages.LatherItBundle"
                              key="settings.title" instance="app.heckit.ide.latherit.LatherItConfigurable"/>
-        <toolWindow id="LatherIt" anchor="left" icon="/icons/latherit.svg"
+        <toolWindow id="LatherIt" anchor="left" icon="/icons/toolWindowLatherIt.svg"
                     factoryClass="app.heckit.ide.latherit.LatherItToolWindowFactory"/>
         <stripTrailingSpacesFilterFactory implementation="app.heckit.ide.latherit.LatherItStripFilterFactory"/>
         <actionPromoter implementation="app.heckit.ide.latherit.LatherItShortcutPromoter"/>

@@ -31,6 +31,7 @@ import org.cef.handler.CefContextMenuHandlerAdapter
 import org.cef.handler.CefLifeSpanHandlerAdapter
 import org.cef.browser.CefFrame
 import java.awt.Toolkit
+import java.awt.event.HierarchyEvent
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import javax.swing.JComponent
@@ -109,6 +110,14 @@ class LatherItView(
             .subscribe(LafManagerListener.TOPIC, LafManagerListener { applyTheme() })
         installShortcuts()
         watchDocument()
+        // Wieder sichtbar (Editor-Tab gewählt, Tool Window aufgeklappt): Änderungen von außen übernehmen. Für das
+        // Tool Window gibt es kein selectNotify wie beim Editor - der Baum bliebe sonst veraltet und sein
+        // nächstes Speichern scheiterte am Konflikt.
+        loading.addHierarchyListener { event ->
+            if (event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() != 0L && loading.isShowing) {
+                reloadIfChangedElsewhere()
+            }
+        }
         browser.loadURL(WebResources.START_URL)
         startScreenshots()
     }
