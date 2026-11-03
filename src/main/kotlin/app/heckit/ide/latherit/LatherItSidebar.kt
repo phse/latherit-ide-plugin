@@ -10,6 +10,7 @@ import com.intellij.openapi.components.Storage
 import com.intellij.openapi.components.StoragePathMacros
 import com.intellij.icons.AllIcons
 import com.intellij.ide.FileIconProvider
+import com.intellij.openapi.fileEditor.impl.EditorTabTitleProvider
 import com.intellij.ide.projectView.impl.ProjectViewState
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
@@ -178,14 +179,26 @@ class LatherItSidebar(private val project: Project) :
             if (node == null) {
                 nodeFiles.remove(key)
                 editors.closeFile(file)
-            } else if (file.update(node.title, node.kind)) {
+            } else {
+                val oldName = file.name
+                if (!file.update(node.title, node.kind, node.path)) continue
                 editors.updateFilePresentation(file)
+                // Alter und neuer Name: Wer bisher Zwilling war, verliert seinen Zusatz, wer es wird, bekommt ihn
+                refreshTwins(project, oldName)
+                refreshTwins(project, file.name)
             }
         }
     }
 
     /** Knoten, wie ihn die Oberfläche meldet (`sidebar_nodes`, `open_node`). */
-    data class NodeInfo(val id: String, val name: String, val method: String?, val kind: String?) {
+    data class NodeInfo(
+        val id: String,
+        val name: String,
+        val method: String?,
+        val kind: String?,
+        /** Namen der Eltern ohne Projekt, vom obersten zum nächsten (Interface, Operation, …) */
+        val path: List<String> = emptyList(),
+    ) {
         val title get() = listOfNotNull(method, name).joinToString(" ")
     }
 
@@ -200,9 +213,17 @@ class LatherItSidebar(private val project: Project) :
             val file = sidebar.nodeFiles.getOrPut("${projectFile.url}#${node.id}") {
                 LatherItNodeFile(projectFile, node.id, node.title, node.kind)
             }
+            file.update(node.title, node.kind, node.path)
             OpenFileDescriptor(project, file)
                 .setUsePreviewTab(preview && sidebar.behavior(Behavior.PREVIEW_TAB))
                 .navigate(!preview)
+            refreshTwins(project, file.name)
+        }
+
+        /** Titel gleichnamiger Tabs neu berechnen (siehe [LatherItNodeTabTitleProvider]). */
+        fun refreshTwins(project: Project, name: String) {
+            val editors = FileEditorManager.getInstance(project) as FileEditorManagerEx
+            editors.openFiles.filter { it is LatherItNodeFile && it.name == name }.forEach { editors.updateFilePresentation(it) }
         }
     }
 }
@@ -223,13 +244,41 @@ class LatherItNodeFile(val projectFile: VirtualFile, val nodeId: String, title: 
 
     override fun getPresentableName(): String = title
 
+    /** Namen der Eltern (ohne Projekt) - für gleichnamige Tabs und den Tooltip */
+    var path: List<String> = emptyList()
+        private set
+
     /** Liefert `true`, wenn sich etwas geändert hat. */
-    fun update(newTitle: String, newKind: String?): Boolean {
-        if (newTitle == title && newKind == kind) return false
+    fun update(newTitle: String, newKind: String?, newPath: List<String>): Boolean {
+        if (newTitle == title && newKind == kind && newPath == path) return false
         title = newTitle
         kind = newKind
+        path = newPath
         return true
     }
+}
+
+/**
+ * Gleichnamige Request-Tabs („Request 1“ unter verschiedenen Operationen) bekommen den Namen des nächsten
+ * Elternknotens dazu, der sie unterscheidet - wie die IDE es bei gleichnamigen Dateien mit dem Ordner macht.
+ */
+class LatherItNodeTabTitleProvider : EditorTabTitleProvider, DumbAware {
+    override fun getEditorTabTitle(project: Project, file: VirtualFile): String? {
+        if (file !is LatherItNodeFile) return null
+        val twins = FileEditorManager.getInstance(project).openFiles
+            .filterIsInstance<LatherItNodeFile>()
+            .filter { it !== file && it.name == file.name }
+        if (twins.isEmpty()) return null
+        // Vom nächsten Elternteil aufwärts den ersten Namen, der sich bei allen Zwillingen unterscheidet
+        val own = file.path.reversed()
+        val level = own.indices.firstOrNull { i -> twins.all { it.path.reversed().getOrNull(i) != own[i] } }
+            ?: own.indices.lastOrNull()
+            ?: return null
+        return "${file.name} — ${own[level]}"
+    }
+
+    override fun getEditorTabTooltipText(project: Project, file: VirtualFile): String? =
+        (file as? LatherItNodeFile)?.let { (it.path + it.name).joinToString(" › ") }
 }
 
 /** Tab-Icon je Knotenart. */
@@ -393,5 +442,9 @@ private class BehaviorToggle(private val option: LatherItSidebar.Behavior) :
 class LatherItSidebarSelectionListener(private val project: Project) : FileEditorManagerListener {
     override fun selectionChanged(event: FileEditorManagerEvent) {
         LatherItSidebar.getInstance(project).editorSelected(event.newFile)
+    }
+
+    override fun fileClosed(source: FileEditorManager, file: VirtualFile) {
+        if (file is LatherItNodeFile) LatherItSidebar.refreshTwins(project, file.name)
     }
 }

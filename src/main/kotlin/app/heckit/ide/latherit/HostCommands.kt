@@ -237,7 +237,10 @@ class HostCommands(
     }
 
     private fun nodeInfo(o: JsonObject) =
-        LatherItSidebar.NodeInfo(o.string("id"), o.string("name"), o.optString("method"), o.optString("kind"))
+        LatherItSidebar.NodeInfo(
+            o.string("id"), o.string("name"), o.optString("method"), o.optString("kind"),
+            o.getAsJsonArray("path")?.map { it.asString }.orEmpty(),
+        )
 
     private fun JsonObject.string(name: String): String =
         optString(name) ?: throw HostException("Parameter fehlt: $name")
