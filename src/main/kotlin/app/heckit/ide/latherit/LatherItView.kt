@@ -55,12 +55,17 @@ class LatherItView(
     // Listenern (siehe lib/smoothWheel.ts und lib/monacoWheel.ts im Web-Projekt).
     private val browser = JBCefBrowser.createBuilder().build()
     private val query = JBCefJSQuery.create(browser as JBCefBrowserBase)
-    private val mocks = MockServers(::emit)
+    /**
+     * Mocks laufen im Seitenleisten-Modus nur im Baum (Tool Window): Er beantwortet die Anfragen, Request-Tabs
+     * starten und stoppen über ihn. Sonst (und ohne offenen Baum) hat jede Ansicht ihre eigenen.
+     */
+    private val sharedMocks: MockServers? = if (viewMode == "detail") LatherItSidebar.getInstance(project).navView?.mocks else null
+    internal val mocks: MockServers = sharedMocks ?: MockServers(::emit)
     private val commands = HostCommands(
         project, file, mocks,
         reload = ::reloadLater,
         ready = { loading.stopLoading() },
-        openNode = { id, name, method, preview -> LatherItSidebar.openNode(project, file, id, name, method, preview) },
+        openNode = { node, preview -> LatherItSidebar.openNode(project, file, node, preview) },
     )
 
     /**
@@ -89,7 +94,7 @@ class LatherItView(
         // Nach dem Browser registriert = vor ihm freigegeben
         Disposer.register(this, query)
         // Mocks enden mit dem Tab - vor dem Browser, damit kein Request mehr an ihn geht
-        Disposer.register(this) { mocks.stopAll() }
+        if (sharedMocks == null) Disposer.register(this) { mocks.stopAll() }
 
         query.addHandler { request ->
             onCall(request)
@@ -270,6 +275,12 @@ class LatherItView(
         }
         // Formatieren auch mit dem Kürzel der IDE (Reformat Code, ⌥⌘L in der Standard-Keymap) - aus der
         // aktiven Keymap, damit es auch mit VSCode-, Eclipse- oder eigener Belegung passt
+        // Umbenennen mit dem Kürzel der IDE (Rename, ⇧F6 in der Standard-Keymap) - ebenfalls aus der aktiven Keymap
+        val rename = KeymapManager.getInstance().activeKeymap.getShortcuts(IdeActions.ACTION_RENAME)
+        if (rename.isNotEmpty()) {
+            LatherItShortcutAction("rename") { emit("shortcut", it) }
+                .registerCustomShortcutSet(CustomShortcutSet(*rename), browser.component, this)
+        }
         val reformat = KeymapManager.getInstance().activeKeymap.getShortcuts(IdeActions.ACTION_EDITOR_REFORMAT)
         if (reformat.isNotEmpty()) {
             LatherItShortcutAction("format") { emit("shortcut", it) }

@@ -48,7 +48,7 @@ class HostCommands(
     /** Die Oberfläche ist geladen und gezeichnet (Ladekreis ausblenden). */
     private val ready: () -> Unit = {},
     /** Seitenleisten-Modus: Knoten als eigenen Editor-Tab öffnen (siehe [LatherItSidebar]). */
-    private val openNode: (id: String, name: String, method: String?, preview: Boolean) -> Unit = { _, _, _, _ -> },
+    private val openNode: (node: LatherItSidebar.NodeInfo, preview: Boolean) -> Unit = { _, _ -> },
 ) {
     /** Aufgeklappte Knoten und Auswahl im Baum (siehe [LatherItTreeStates]). */
     private val treeStates get() = project.getService(LatherItTreeStates::class.java)
@@ -93,7 +93,12 @@ class HostCommands(
         "close_editor" -> onEdt { FileEditorManager.getInstance(project).closeFile(file); null }
         // ⇧⌘F im LatherIt-Tab: Find in Files der IDE mit dem dort markierten Text
         "ui_ready" -> onEdt { ready(); null }
-        "open_node" -> onEdt { openNode(args.string("id"), args.string("name"), args.optString("method"), args.get("preview")?.asBoolean == true); null }
+        "open_node" -> onEdt { openNode(nodeInfo(args), args.get("preview")?.asBoolean == true); null }
+        "sidebar_nodes" -> onEdt {
+            val nodes = args.getAsJsonArray("nodes")?.map { nodeInfo(it.asJsonObject) }.orEmpty()
+            LatherItSidebar.getInstance(project).syncNodes(file, nodes); null
+        }
+        "sidebar_module_on" -> onEdt { LatherItSidebar.getInstance(project).enableFor(file); null }
         "find_in_files" -> onEdt { findInFiles(args.string("text")); null }
         "open_project_path" -> onEdt { LatherItProjects.openPath(project, args.string("path")); null }
         "import_soapui" -> onEdt { LatherItProjects.importSoapUi(project, file.parent); null }
@@ -230,6 +235,9 @@ class HostCommands(
         }, ModalityState.defaultModalityState())
         return future
     }
+
+    private fun nodeInfo(o: JsonObject) =
+        LatherItSidebar.NodeInfo(o.string("id"), o.string("name"), o.optString("method"), o.optString("kind"))
 
     private fun JsonObject.string(name: String): String =
         optString(name) ?: throw HostException("Parameter fehlt: $name")

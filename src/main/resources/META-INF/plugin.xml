@@ -50,6 +50,9 @@
         <errorHandler implementation="com.intellij.diagnostic.JetBrainsMarketplaceErrorReportSubmitter"/>
         <fileEditorProvider implementation="app.heckit.ide.latherit.LatherItEditorProvider"/>
         <fileEditorProvider implementation="app.heckit.ide.latherit.LatherItNodeEditorProvider"/>
+        <fileIconProvider implementation="app.heckit.ide.latherit.LatherItNodeIconProvider"/>
+        <projectConfigurable parentId="tools" id="app.heckit.ide.latherit.settings" bundle="messages.LatherItBundle"
+                             key="settings.title" instance="app.heckit.ide.latherit.LatherItConfigurable"/>
         <toolWindow id="LatherIt" anchor="left" icon="/icons/latherit.svg"
                     factoryClass="app.heckit.ide.latherit.LatherItToolWindowFactory"/>
         <stripTrailingSpacesFilterFactory implementation="app.heckit.ide.latherit.LatherItStripFilterFactory"/>

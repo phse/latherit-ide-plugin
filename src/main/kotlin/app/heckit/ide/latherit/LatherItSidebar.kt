@@ -8,7 +8,18 @@ import com.intellij.openapi.components.SimplePersistentStateComponent
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.components.StoragePathMacros
+import com.intellij.icons.AllIcons
+import com.intellij.ide.FileIconProvider
 import com.intellij.ide.projectView.impl.ProjectViewState
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
+import com.intellij.openapi.project.DumbService
+import com.intellij.openapi.project.guessProjectDir
+import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.openapi.util.IconLoader
+import com.intellij.openapi.vfs.VfsUtilCore
+import com.intellij.ui.SimpleListCellRenderer
+import javax.swing.Icon
 import com.intellij.ide.ui.UISettings
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.fileEditor.FileEditor
@@ -129,12 +140,53 @@ class LatherItSidebar(private val project: Project) :
     fun projectFile(): VirtualFile? {
         state.projectUrl?.let { url -> VirtualFileManager.getInstance().findFileByUrl(url)?.takeIf { it.isValid } }
             ?.let { return it }
+        return allProjectFiles().firstOrNull()?.also { state.projectUrl = it.url }
+    }
+
+    /** Alle Projektdateien im Projekt, nach Pfad sortiert. */
+    fun allProjectFiles(): List<VirtualFile> {
         val scope = GlobalSearchScope.projectScope(project)
-        return FilenameIndex.getAllFilesByExt(project, "yaml", scope)
-            .plus(FilenameIndex.getAllFilesByExt(project, "yml", scope))
+        return (FilenameIndex.getAllFilesByExt(project, "yaml", scope) + FilenameIndex.getAllFilesByExt(project, "yml", scope))
             .filter { LatherItEditorProvider.isProjectFile(it.name) }
-            .minByOrNull { it.path }
-            ?.also { state.projectUrl = it.url }
+            .sortedBy { it.path }
+    }
+
+    /** Projektdatei im Tool Window zeigen (Auswahl, Öffnen einer `latherit.yaml` bei eingeschaltetem Modul). */
+    fun showProject(file: VirtualFile) {
+        val changed = state.projectUrl != file.url
+        state.projectUrl = file.url
+        val toolWindow = ToolWindowManager.getInstance(project).getToolWindow(TOOL_WINDOW_ID) ?: return
+        if (changed && navView != null) fillToolWindow(project, toolWindow)
+        toolWindow.activate(null)
+    }
+
+    /** „Als Seitenleisten-Modul öffnen“ aus der Ansicht im Editor: Modus an, Datei ins Tool Window. */
+    fun enableFor(file: VirtualFile) {
+        state.projectUrl = file.url
+        enabled = true
+        FileEditorManager.getInstance(project).closeFile(file)
+    }
+
+    /** Titel/Art aller Knoten aus dem Baum: offene Tabs umbenennen, Tabs gelöschter Knoten schließen. */
+    fun syncNodes(projectFile: VirtualFile, nodes: List<NodeInfo>) {
+        val byId = nodes.associateBy { it.id }
+        val editors = FileEditorManager.getInstance(project) as FileEditorManagerEx
+        val prefix = "${projectFile.url}#"
+        for ((key, file) in nodeFiles.entries.toList()) {
+            if (!key.startsWith(prefix)) continue
+            val node = byId[file.nodeId]
+            if (node == null) {
+                nodeFiles.remove(key)
+                editors.closeFile(file)
+            } else if (file.update(node.title, node.kind)) {
+                editors.updateFilePresentation(file)
+            }
+        }
+    }
+
+    /** Knoten, wie ihn die Oberfläche meldet (`sidebar_nodes`, `open_node`). */
+    data class NodeInfo(val id: String, val name: String, val method: String?, val kind: String?) {
+        val title get() = listOfNotNull(method, name).joinToString(" ")
     }
 
     companion object {
@@ -143,10 +195,11 @@ class LatherItSidebar(private val project: Project) :
         fun getInstance(project: Project): LatherItSidebar = project.getService(LatherItSidebar::class.java)
 
         /** [preview]: per Einfachklick geöffnet - mit „Enable Preview Tab“ im wiederverwendeten Vorschau-Tab. */
-        fun openNode(project: Project, projectFile: VirtualFile, id: String, name: String, method: String?, preview: Boolean) {
+        fun openNode(project: Project, projectFile: VirtualFile, node: NodeInfo, preview: Boolean) {
             val sidebar = getInstance(project)
-            val title = listOfNotNull(method, name).joinToString(" ")
-            val file = sidebar.nodeFiles.getOrPut("${projectFile.url}#$id") { LatherItNodeFile(projectFile, id, title) }
+            val file = sidebar.nodeFiles.getOrPut("${projectFile.url}#${node.id}") {
+                LatherItNodeFile(projectFile, node.id, node.title, node.kind)
+            }
             OpenFileDescriptor(project, file)
                 .setUsePreviewTab(preview && sidebar.behavior(Behavior.PREVIEW_TAB))
                 .navigate(!preview)
@@ -155,9 +208,45 @@ class LatherItSidebar(private val project: Project) :
 }
 
 /** Ein Knoten einer Projektdatei als eigener Editor-Tab (nur im Seitenleisten-Modus). */
-class LatherItNodeFile(val projectFile: VirtualFile, val nodeId: String, title: String) : LightVirtualFile(title) {
+class LatherItNodeFile(val projectFile: VirtualFile, val nodeId: String, title: String, kind: String?) : LightVirtualFile(title) {
+    private var title = title
+
+    /** Art des Knotens (`request`, `testCase`, … wie `NodeKind` in src/model/project.ts) - fürs Tab-Icon */
+    var kind = kind
+        private set
+
     init {
         isWritable = false
+    }
+
+    override fun getName(): String = title
+
+    override fun getPresentableName(): String = title
+
+    /** Liefert `true`, wenn sich etwas geändert hat. */
+    fun update(newTitle: String, newKind: String?): Boolean {
+        if (newTitle == title && newKind == kind) return false
+        title = newTitle
+        kind = newKind
+        return true
+    }
+}
+
+/** Tab-Icon je Knotenart. */
+class LatherItNodeIconProvider : FileIconProvider {
+    override fun getIcon(file: VirtualFile, flags: Int, project: Project?): Icon? {
+        if (file !is LatherItNodeFile) return null
+        return when (file.kind) {
+            "testSuite", "testCase", "testStep" -> AllIcons.Nodes.Test
+            "loadTest" -> AllIcons.Actions.Profile
+            "mockService", "mockOperation", "mockResponse" -> AllIcons.Nodes.Servlet
+            "project" -> AllIcons.Nodes.Folder
+            else -> LATHERIT_ICON
+        }
+    }
+
+    private companion object {
+        val LATHERIT_ICON = IconLoader.getIcon("/icons/latherit.svg", LatherItNodeIconProvider::class.java)
     }
 }
 
@@ -203,25 +292,61 @@ class LatherItToolWindowFactory : ToolWindowFactory, DumbAware {
     override fun shouldBeAvailable(project: Project): Boolean = LatherItSidebar.getInstance(project).enabled
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        toolWindow.setTitleActions(listOf(SwitchToEditorViewAction()))
+        toolWindow.setTitleActions(listOf(ChooseProjectFileAction(), SwitchToEditorViewAction()))
         toolWindow.setAdditionalGearActions(DefaultActionGroup().apply {
             add(DefaultActionGroup(LatherItBundle.message("sidebar.behavior"), true).apply {
                 LatherItSidebar.Behavior.entries.forEach { add(BehaviorToggle(it)) }
             })
         })
-        val file = LatherItSidebar.getInstance(project).projectFile()
-        val content = if (file == null || !JBCefApp.isSupported()) {
-            val text = if (file == null) "sidebar.noProject" else "jcef.unavailable"
-            ContentFactory.getInstance().createContent(JBPanelWithEmptyText().withEmptyText(LatherItBundle.message(text)), null, false)
-        } else {
-            val disposable = Disposer.newDisposable("LatherIt sidebar")
-            val view = LatherItView(project, file, disposable, "nav")
-            val sidebar = LatherItSidebar.getInstance(project)
-            sidebar.navView = view
-            Disposer.register(disposable) { if (sidebar.navView === view) sidebar.navView = null }
-            ContentFactory.getInstance().createContent(view.component, null, false).apply { setDisposer(disposable) }
-        }
-        toolWindow.contentManager.addContent(content)
+        fillToolWindow(project, toolWindow)
+    }
+}
+
+/** Inhalt des Tool Windows (neu) aufbauen - mit der gewählten Projektdatei. */
+internal fun fillToolWindow(project: Project, toolWindow: ToolWindow) {
+    val sidebar = LatherItSidebar.getInstance(project)
+    toolWindow.contentManager.removeAllContents(true)
+    val file = sidebar.projectFile()
+    val content = if (file == null || !JBCefApp.isSupported()) {
+        val text = if (file == null) "sidebar.noProject" else "jcef.unavailable"
+        ContentFactory.getInstance().createContent(JBPanelWithEmptyText().withEmptyText(LatherItBundle.message(text)), null, false)
+    } else {
+        val disposable = Disposer.newDisposable("LatherIt sidebar")
+        val view = LatherItView(project, file, disposable, "nav")
+        sidebar.navView = view
+        Disposer.register(disposable) { if (sidebar.navView === view) sidebar.navView = null }
+        val name = file.name.removeSuffix(".yaml").removeSuffix(".yml").removeSuffix(".latherit")
+        ContentFactory.getInstance().createContent(view.component, name, false).apply { setDisposer(disposable) }
+    }
+    toolWindow.contentManager.addContent(content)
+}
+
+/** Bei mehreren Projektdateien: Auswahl, welche das Tool Window zeigt. */
+private class ChooseProjectFileAction : com.intellij.openapi.project.DumbAwareAction(
+    { LatherItBundle.message("sidebar.chooseProject") },
+    AllIcons.General.ArrowDown,
+) {
+    override fun getActionUpdateThread() = ActionUpdateThread.BGT
+
+    override fun update(e: AnActionEvent) {
+        val project = e.project
+        e.presentation.isEnabledAndVisible = project != null && !DumbService.isDumb(project) &&
+            LatherItSidebar.getInstance(project).allProjectFiles().size > 1
+    }
+
+    override fun actionPerformed(e: AnActionEvent) {
+        val project = e.project ?: return
+        val sidebar = LatherItSidebar.getInstance(project)
+        val current = sidebar.projectFile()
+        val base = project.guessProjectDir()
+        val files = sidebar.allProjectFiles()
+        JBPopupFactory.getInstance().createPopupChooserBuilder(files)
+            .setRenderer(SimpleListCellRenderer.create("") { file ->
+                (base?.let { VfsUtilCore.getRelativePath(file, it) } ?: file.path) + if (file == current) "  ✓" else ""
+            })
+            .setItemChosenCallback { sidebar.showProject(it) }
+            .createPopup()
+            .showUnderneathOf(e.inputEvent?.component ?: return)
     }
 }
 
@@ -240,7 +365,7 @@ class ToggleSidebarModuleAction : DumbAwareToggleAction() {
 /** Im Tool Window: zurück zur gewohnten Ansicht im Editor (schaltet den Modus aus und öffnet die Datei). */
 private class SwitchToEditorViewAction : com.intellij.openapi.project.DumbAwareAction(
     { LatherItBundle.message("action.switchToEditor") },
-    com.intellij.icons.AllIcons.Actions.MoveToWindow,
+    AllIcons.Actions.MoveToWindow,
 ) {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
