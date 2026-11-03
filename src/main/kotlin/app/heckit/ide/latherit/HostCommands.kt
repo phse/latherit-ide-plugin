@@ -47,6 +47,8 @@ class HostCommands(
     private val reload: () -> Unit = {},
     /** Die Oberfläche ist geladen und gezeichnet (Ladekreis ausblenden). */
     private val ready: () -> Unit = {},
+    /** Seitenleisten-Modus: Knoten als eigenen Editor-Tab öffnen (siehe [LatherItSidebar]). */
+    private val openNode: (id: String, name: String, method: String?, preview: Boolean) -> Unit = { _, _, _, _ -> },
 ) {
     /** Aufgeklappte Knoten und Auswahl im Baum (siehe [LatherItTreeStates]). */
     private val treeStates get() = project.getService(LatherItTreeStates::class.java)
@@ -91,6 +93,7 @@ class HostCommands(
         "close_editor" -> onEdt { FileEditorManager.getInstance(project).closeFile(file); null }
         // ⇧⌘F im LatherIt-Tab: Find in Files der IDE mit dem dort markierten Text
         "ui_ready" -> onEdt { ready(); null }
+        "open_node" -> onEdt { openNode(args.string("id"), args.string("name"), args.optString("method"), args.get("preview")?.asBoolean == true); null }
         "find_in_files" -> onEdt { findInFiles(args.string("text")); null }
         "open_project_path" -> onEdt { LatherItProjects.openPath(project, args.string("path")); null }
         "import_soapui" -> onEdt { LatherItProjects.importSoapUi(project, file.parent); null }

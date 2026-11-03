@@ -42,14 +42,26 @@ import javax.swing.KeyStroke
  * Die Oberfläche ruft `window.__latheritIde.call(befehl, args)` auf, das Plugin führt den Befehl
  * aus ([HostCommands]) und meldet das Ergebnis per `_settle` zurück.
  */
-class LatherItView(private val project: Project, private val file: VirtualFile, parent: Disposable) : Disposable {
+class LatherItView(
+    private val project: Project,
+    private val file: VirtualFile,
+    parent: Disposable,
+    /** `full` (ganze Oberfläche), `nav` (nur Baum, Tool Window) oder `detail` (nur [nodeId]) - siehe src/lib/ide.ts */
+    private val viewMode: String = "full",
+    private val nodeId: String? = null,
+) : Disposable {
     // Seit 2026.x läuft JCEF im Remote-Modus und rendert immer offscreen - setOffScreenRendering(false)
     // würde nur ignoriert (mit Warnung im Log). Das Mausrad glättet die Oberfläche selbst, mit nur passiven
     // Listenern (siehe lib/smoothWheel.ts und lib/monacoWheel.ts im Web-Projekt).
     private val browser = JBCefBrowser.createBuilder().build()
     private val query = JBCefJSQuery.create(browser as JBCefBrowserBase)
     private val mocks = MockServers(::emit)
-    private val commands = HostCommands(project, file, mocks, reload = ::reloadLater, ready = { loading.stopLoading() })
+    private val commands = HostCommands(
+        project, file, mocks,
+        reload = ::reloadLater,
+        ready = { loading.stopLoading() },
+        openNode = { id, name, method, preview -> LatherItSidebar.openNode(project, file, id, name, method, preview) },
+    )
 
     /**
      * Ladekreis bis die Oberfläche gezeichnet ist (wie die Markdown-Vorschau) - sonst ist beim Öffnen erst
@@ -167,6 +179,9 @@ class LatherItView(private val project: Project, private val file: VirtualFile, 
             projectPath: ${gson.toJson(file.path)},
             importFrom: ${gson.toJson(consumeImport())},
             locale: ${gson.toJson(DynamicBundle.getLocale().toLanguageTag())},
+            view: ${gson.toJson(viewMode)},
+            nodeId: ${gson.toJson(nodeId)},
+            sidebar: ${gson.toJson(LatherItSidebar.getInstance(project).clickSettings())},
             call(command, args) {
               return new Promise((resolve, reject) => {
                 const id = nextId++
