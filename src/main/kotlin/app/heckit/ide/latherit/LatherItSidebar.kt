@@ -10,6 +10,7 @@ import com.intellij.openapi.components.Storage
 import com.intellij.openapi.components.StoragePathMacros
 import com.intellij.icons.AllIcons
 import com.intellij.ide.FileIconProvider
+import com.intellij.openapi.util.text.HtmlChunk
 import com.intellij.openapi.fileEditor.impl.EditorTabTitleProvider
 import com.intellij.ide.projectView.impl.ProjectViewState
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -17,9 +18,10 @@ import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.openapi.ui.popup.PopupStep
+import com.intellij.openapi.ui.popup.util.BaseListPopupStep
 import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.vfs.VfsUtilCore
-import com.intellij.ui.SimpleListCellRenderer
 import javax.swing.Icon
 import com.intellij.ide.ui.UISettings
 import com.intellij.openapi.actionSystem.DefaultActionGroup
@@ -32,6 +34,7 @@ import com.intellij.openapi.fileEditor.FileEditorState
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.DumbAwareToggleAction
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.UserDataHolderBase
@@ -83,7 +86,8 @@ class LatherItSidebar(private val project: Project) :
     fun behavior(option: Behavior): Boolean {
         initBehavior()
         return when (option) {
-            Behavior.PREVIEW_TAB -> state.previewTab
+            // Global wie im Project-Fenster: Die IDE öffnet Vorschau-Tabs nur, wenn diese Einstellung an ist
+            Behavior.PREVIEW_TAB -> UISettings.getInstance().openInPreviewTabIfPossible
             Behavior.SINGLE_CLICK_OPEN -> state.singleClickOpen
             Behavior.SINGLE_CLICK_EXPAND -> state.singleClickExpand
             Behavior.ALWAYS_SELECT -> state.alwaysSelect
@@ -93,7 +97,10 @@ class LatherItSidebar(private val project: Project) :
     fun setBehavior(option: Behavior, value: Boolean) {
         initBehavior()
         when (option) {
-            Behavior.PREVIEW_TAB -> state.previewTab = value
+            Behavior.PREVIEW_TAB -> UISettings.getInstance().let {
+                it.openInPreviewTabIfPossible = value
+                it.fireUISettingsChanged()
+            }
             Behavior.SINGLE_CLICK_OPEN -> state.singleClickOpen = value
             Behavior.SINGLE_CLICK_EXPAND -> state.singleClickExpand = value
             Behavior.ALWAYS_SELECT -> state.alwaysSelect = value
@@ -109,7 +116,7 @@ class LatherItSidebar(private val project: Project) :
 
     private fun initBehavior() {
         if (state.behaviorInitialized) return
-        val projectView = ProjectViewState.getInstance(project)
+        val projectView = project.getService(ProjectViewState::class.java)
         state.previewTab = UISettings.getInstance().openInPreviewTabIfPossible
         state.singleClickOpen = projectView.autoscrollToSource
         state.singleClickExpand = projectView.openDirectoriesWithSingleClick
@@ -213,10 +220,14 @@ class LatherItSidebar(private val project: Project) :
             val file = sidebar.nodeFiles.getOrPut("${projectFile.url}#${node.id}") {
                 LatherItNodeFile(projectFile, node.id, node.title, node.kind)
             }
+            // Nach dem Umbenennen kommt der neue Name oft hier an, bevor sidebar_nodes ihn meldet - dann muss
+            // auch der bisherige Zwilling unter dem alten Namen seinen Zusatz verlieren
+            val oldName = file.name
             file.update(node.title, node.kind, node.path)
             OpenFileDescriptor(project, file)
                 .setUsePreviewTab(preview && sidebar.behavior(Behavior.PREVIEW_TAB))
                 .navigate(!preview)
+            if (oldName != file.name) refreshTwins(project, oldName)
             refreshTwins(project, file.name)
         }
 
@@ -277,8 +288,8 @@ class LatherItNodeTabTitleProvider : EditorTabTitleProvider, DumbAware {
         return "${file.name} — ${own[level]}"
     }
 
-    override fun getEditorTabTooltipText(project: Project, file: VirtualFile): String? =
-        (file as? LatherItNodeFile)?.let { (it.path + it.name).joinToString(" › ") }
+    override fun getEditorTabTooltipHtml(project: Project, virtualFile: VirtualFile): HtmlChunk? =
+        (virtualFile as? LatherItNodeFile)?.let { HtmlChunk.text((it.path + it.name).joinToString(" › ")) }
 }
 
 /** Tab-Icon je Knotenart. */
@@ -389,13 +400,16 @@ private class ChooseProjectFileAction : com.intellij.openapi.project.DumbAwareAc
         val current = sidebar.projectFile()
         val base = project.guessProjectDir()
         val files = sidebar.allProjectFiles()
-        JBPopupFactory.getInstance().createPopupChooserBuilder(files)
-            .setRenderer(SimpleListCellRenderer.create("") { file ->
-                (base?.let { VfsUtilCore.getRelativePath(file, it) } ?: file.path) + if (file == current) "  ✓" else ""
-            })
-            .setItemChosenCallback { sidebar.showProject(it) }
-            .createPopup()
-            .showUnderneathOf(e.inputEvent?.component ?: return)
+        val step = object : BaseListPopupStep<VirtualFile>(null, files) {
+            override fun getTextFor(value: VirtualFile) =
+                (base?.let { VfsUtilCore.getRelativePath(value, it) } ?: value.path) + if (value == current) "  ✓" else ""
+
+            override fun onChosen(selectedValue: VirtualFile, finalChoice: Boolean): PopupStep<*>? {
+                sidebar.showProject(selectedValue)
+                return FINAL_CHOICE
+            }
+        }
+        JBPopupFactory.getInstance().createListPopup(step).showUnderneathOf(e.inputEvent?.component ?: return)
     }
 }
 
@@ -445,6 +459,8 @@ class LatherItSidebarSelectionListener(private val project: Project) : FileEdito
     }
 
     override fun fileClosed(source: FileEditorManager, file: VirtualFile) {
-        if (file is LatherItNodeFile) LatherItSidebar.refreshTwins(project, file.name)
+        if (file !is LatherItNodeFile) return
+        // Während fileClosed zählt die geschlossene Datei noch zu openFiles - der Zwilling behielte den Zusatz
+        ApplicationManager.getApplication().invokeLater({ LatherItSidebar.refreshTwins(project, file.name) }, project.disposed)
     }
 }

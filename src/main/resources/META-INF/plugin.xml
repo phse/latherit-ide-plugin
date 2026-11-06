@@ -24,6 +24,8 @@
       the requests you use most.</li>
   <li>Project files are plain YAML, made for version control, and saved automatically like any other file in the IDE.</li>
   <li>HTTPS trusts the certificates of your operating system, like your browser does.</li>
+  <li>Optional sidebar module: the tree as a tool window next to Project, each request in its own editor tab
+      (per project, <i>Settings | Tools | LatherIt</i>).</li>
 </ul>
 
 <h3>Usage</h3>

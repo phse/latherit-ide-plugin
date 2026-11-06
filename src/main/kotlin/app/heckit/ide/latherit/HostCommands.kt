@@ -18,6 +18,7 @@ import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
@@ -49,6 +50,8 @@ class HostCommands(
     private val ready: () -> Unit = {},
     /** Seitenleisten-Modus: Knoten als eigenen Editor-Tab öffnen (siehe [LatherItSidebar]). */
     private val openNode: (node: LatherItSidebar.NodeInfo, preview: Boolean) -> Unit = { _, _ -> },
+    /** ⌘W: den eigenen Editor-Tab schließen (im Seitenleisten-Modus der Request-Tab, nicht die Projektdatei). */
+    private val closeEditor: () -> Unit = { FileEditorManager.getInstance(project).closeFile(file) },
 ) {
     /** Aufgeklappte Knoten und Auswahl im Baum (siehe [LatherItTreeStates]). */
     private val treeStates get() = project.getService(LatherItTreeStates::class.java)
@@ -90,7 +93,10 @@ class HostCommands(
         "new_project" -> onEdt { LatherItProjects.createNew(project, file.parent); null }
         "open_project" -> onEdt { LatherItProjects.chooseAndOpen(project, file.parent); null }
         // ⌘W ohne offenen LatherIt-Tab: wie in der IDE den Editor (das Projekt) schließen
-        "close_editor" -> onEdt { FileEditorManager.getInstance(project).closeFile(file); null }
+        "close_editor" -> onEdt { closeEditor(); null }
+        "input_dialog" -> onEdt {
+            Messages.showInputDialog(project, null, args.string("title"), null, args.optString("value"), null)
+        }
         // ⇧⌘F im LatherIt-Tab: Find in Files der IDE mit dem dort markierten Text
         "ui_ready" -> onEdt { ready(); null }
         "open_node" -> onEdt { openNode(nodeInfo(args), args.get("preview")?.asBoolean == true); null }

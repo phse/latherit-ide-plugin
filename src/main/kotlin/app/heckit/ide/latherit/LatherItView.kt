@@ -14,6 +14,7 @@ import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.SystemInfo
@@ -67,7 +68,15 @@ class LatherItView(
         reload = ::reloadLater,
         ready = { loading.stopLoading() },
         openNode = { node, preview -> LatherItSidebar.openNode(project, file, node, preview) },
+        closeEditor = ::closeEditor,
     )
+
+    private fun closeEditor() {
+        val manager = FileEditorManager.getInstance(project)
+        if (viewMode != "detail") return manager.closeFile(file)
+        manager.openFiles.filter { it is LatherItNodeFile && it.projectFile == file && it.nodeId == nodeId }
+            .forEach(manager::closeFile)
+    }
 
     /**
      * Ladekreis bis die Oberfläche gezeichnet ist (wie die Markdown-Vorschau) - sonst ist beim Öffnen erst
