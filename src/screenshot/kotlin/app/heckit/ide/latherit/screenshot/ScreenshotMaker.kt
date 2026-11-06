@@ -1,6 +1,9 @@
 package app.heckit.ide.latherit.screenshot
 
+import app.heckit.ide.latherit.LatherItNodeEditor
+import app.heckit.ide.latherit.LatherItSidebar
 import app.heckit.ide.latherit.LatherItView
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.google.gson.Gson
 import com.google.gson.JsonParser
 import com.intellij.openapi.application.ApplicationManager
@@ -43,6 +46,7 @@ object ScreenshotMaker {
     }
 
     private fun run(project: Project, view: LatherItView, out: File) {
+        outDir = out
         val frame = edt { WindowManager.getInstance().getFrame(project) } ?: error("no frame")
         edt {
             frame.extendedState = JFrame.NORMAL
@@ -84,8 +88,45 @@ object ScreenshotMaker {
         shot(frame, view, File(out, "04-tests.png"))
 
         js(view, "$STORES store('mocks').stop('mock-shop')")
+        sidebarModule(project, frame, view)
         log.warn("LatherIt: screenshots written to $out")
     }
+
+    /** Seitenleisten-Modul: Baum im Tool Window, Requests als eigene Editor-Tabs. */
+    private fun sidebarModule(project: Project, frame: JFrame, view: LatherItView) {
+        val sidebar = LatherItSidebar.getInstance(project)
+        edt {
+            val file = FileEditorManager.getInstance(project).selectedFiles.first()
+            sidebar.enableFor(file)
+            ToolWindowManager.getInstance(project).getToolWindow(LatherItSidebar.TOOL_WINDOW_ID)?.let { tw ->
+                tw.activate(null)
+            }
+        }
+        var nav: LatherItView? = null
+        repeat(60) { if (nav == null) { nav = edt { sidebar.navView }; Thread.sleep(500) } }
+        val tree = nav ?: error("no nav view")
+        waitFor(tree, "$STORES return store('workspace').projects.length > 0")
+        js(tree, "$STORES store('mocks').start('mock-shop')")
+        Thread.sleep(3000)
+        val expand = listOf("rest-shop", "res-orders", "res-order", "m-order-get", "m-orders-get", "m-orders-post")
+        for (id in listOf("req-orders-create", "req-order-get")) {
+            select(tree, id, expand)
+            js(tree, "document.querySelector('.row.selected')?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))")
+            Thread.sleep(2500)
+        }
+        val detail = edt { (FileEditorManager.getInstance(project).selectedEditor as? LatherItNodeEditor)?.view } ?: error("no request tab")
+        waitFor(detail, "return !!document.querySelector('button.send')")
+        // Der Mock im Baum braucht nach dem Wechsel etwas, bis er antwortet - notfalls erneut senden
+        for (attempt in 1..5) {
+            js(detail, "document.querySelector('button.send').click()")
+            Thread.sleep(1500)
+            if (js(detail, "return !document.querySelector('.response .error, .response-error, [class*=error]')").contains("true")) break
+        }
+        shot(frame, listOf(tree, detail), File(outDir!!, "05-sidebar.png"))
+        js(tree, "$STORES store('mocks').stop('mock-shop')")
+    }
+
+    private var outDir: File? = null
 
     private fun select(view: LatherItView, id: String, expand: List<String> = emptyList()) {
         val ids = expand.joinToString(",") { "'$it'" }
@@ -109,19 +150,25 @@ object ScreenshotMaker {
     }
 
     /** Zeichnet den Frame und legt die Aufnahme der Oberfläche über den Browser-Bereich. */
-    private fun shot(frame: JFrame, view: LatherItView, file: File) {
-        val page = view.devTools("Page.captureScreenshot", """{"format":"png"}""").get(30, TimeUnit.SECONDS)
-        val data = JsonParser.parseString(page).asJsonObject.get("data").asString
-        val content = ImageIO.read(ByteArrayInputStream(Base64.getDecoder().decode(data)))
+    private fun shot(frame: JFrame, view: LatherItView, file: File) = shot(frame, listOf(view), file)
+
+    private fun shot(frame: JFrame, views: List<LatherItView>, file: File) {
+        val contents = views.map { view ->
+            val page = view.devTools("Page.captureScreenshot", """{"format":"png"}""").get(30, TimeUnit.SECONDS)
+            val data = JsonParser.parseString(page).asJsonObject.get("data").asString
+            view to ImageIO.read(ByteArrayInputStream(Base64.getDecoder().decode(data)))
+        }
         edt {
             val root = frame.rootPane
             val image = BufferedImage((root.width * SCALE).toInt(), (root.height * SCALE).toInt(), BufferedImage.TYPE_INT_ARGB)
             val g = image.createGraphics()
             g.scale(SCALE, SCALE)
             root.paint(g)
-            val browser = view.component
-            val at = SwingUtilities.convertPoint(browser.parent, browser.location, root)
-            g.drawImage(content, at.x, at.y, browser.width, browser.height, null)
+            for ((view, content) in contents) {
+                val browser = view.component
+                val at = SwingUtilities.convertPoint(browser.parent, browser.location, root)
+                g.drawImage(content, at.x, at.y, browser.width, browser.height, null)
+            }
             g.dispose()
             ImageIO.write(image, "png", file)
         }
