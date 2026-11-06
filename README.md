@@ -98,8 +98,8 @@ see https://plugins.jetbrains.com/docs/intellij/plugin-signing.html).
 ```
 
 Copies `marketplace/demo-project` to `/Users/Shared/latherit-demo` (so no user path shows up in the
-images), opens it in the sandbox, starts the mock and writes four PNGs to `marketplace/screenshots/`
-(request side by side, stacked, mock with log, test run). The IDE paints its own window, the UI comes
+images), opens it in the sandbox, starts the mock and writes five PNGs to `marketplace/screenshots/`
+(request side by side, stacked, mock with log, test run, sidebar module). The IDE paints its own window, the UI comes
 from the Chromium DevTools, so no screen recording permission is needed. The helper lives in
 `src/screenshot/` and is only compiled with `-Pscreenshots`, never into a release. Close the sandbox
 afterwards.

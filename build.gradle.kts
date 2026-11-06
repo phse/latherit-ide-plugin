@@ -58,6 +58,10 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>1.2.1</h3>
+            <ul>
+              <li>Sidebar module: opening a request tab no longer stops running mock services.</li>
+            </ul>
             <h3>1.2.0</h3>
             <ul>
               <li>Optional sidebar module, per project: the LatherIt tree as a tool window next to Project, every request,

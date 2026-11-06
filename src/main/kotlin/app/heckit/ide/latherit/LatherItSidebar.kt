@@ -321,7 +321,7 @@ class LatherItNodeEditorProvider : FileEditorProvider, DumbAware {
 }
 
 class LatherItNodeEditor(project: Project, private val file: LatherItNodeFile) : UserDataHolderBase(), FileEditor {
-    private val view: LatherItView? = if (JBCefApp.isSupported()) {
+    internal val view: LatherItView? = if (JBCefApp.isSupported()) {
         runCatching { LatherItView(project, file.projectFile, this, "detail", file.nodeId) }.getOrNull()
     } else {
         null
