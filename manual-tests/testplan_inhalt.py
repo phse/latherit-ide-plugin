@@ -6,7 +6,7 @@ Ein Schritt ist ein Text oder ein Paar (Text, Code) - der Code erscheint kopierb
 """
 
 TITEL = "LatherIt im IDE-Plugin - Handtests"
-UNTERTITEL = "Testplan zum Abarbeiten in Etappen · Plugin ab 0.2.2 · Stand 24. Oktober 2026"
+UNTERTITEL = "Testplan zum Abarbeiten in Etappen · Plugin ab 0.2.2 · Stand 3. November 2026"
 
 S = "http://localhost:8088"
 
@@ -36,6 +36,7 @@ VORWORT = [
         "Fälle mit der Marke **neu 24.10.** oder **geändert 24.10.** sind am 24. Oktober hinzugekommen bzw. "
         "angepasst worden (Scrollen, Editor-Bedienung, Suchen, Öffnen des Tabs) - wer den Plan schon "
         "durchgegangen ist, prüft nur diese.",
+        "**Kapitel 14** (Seitenleisten-Modul, Marke **neu in 1.2**) läuft einmal auf der Hauptplattform.",
         "Fälle mit der Marke **neu in 0.3** prüfen die Schutzfunktion gegen das Überschreiben fremder "
         "Änderungen, die nach 0.2.2 hinzugekommen ist.",
     ]),
@@ -56,6 +57,7 @@ SITZUNGEN = [
     ["12", "SoapUI-Import (I-…)", "15 min", "Testserver"],
     ["13", "Bedienung: Dialoge, Zwischenablage, Kürzel, Darstellung (B-…)", "45 min", "-"],
     ["14", "Plattformen und IDEs (Kapitel 13), je Plattform", "45-60 min", "Rauchtest zuerst"],
+    ["15", "Seitenleisten-Modul (Kapitel 14, SB-…)", "45 min", "Sitzung 1"],
 ]
 
 KAPITEL = [
@@ -1881,6 +1883,257 @@ KAPITEL = [
                             ("Vor dem Release zusätzlich:", "./gradlew verifyPlugin"),
                         ],
                         "erwartet": ["Läuft in beiden; `verifyPlugin` ohne Probleme und ohne Deprecations."],
+                    },
+                ],
+            },
+        ],
+    },
+    # ------------------------------------------------------------------ 14
+    {
+        "titel": "Seitenleisten-Modul",
+        "kurz": "Baum als Tool Window, Requests als eigene Editor-Tabs (neu in 1.2)",
+        "text": [
+            ("p", "Ausgangslage: Testordner aus V-04 mit `shop-api.latherit.yaml`. Das Modul gilt je Projekt und nur "
+                  "für den eigenen Rechner (`workspace.xml`). Persistenz nur nach Beenden mit ⌘Q prüfen."),
+        ],
+        "unter": [
+            {
+                "titel": "Ein- und Ausschalten",
+                "faelle": [
+                    {
+                        "id": "SB-01", "titel": "Über das Menü Tools", "tag": "neu in 1.2",
+                        "schritte": ["*Tools › LatherIt as Sidebar Module* wählen."],
+                        "erwartet": [
+                            "Links neben *Project* erscheint das Tool Window **LatherIt** und geht auf.",
+                            "Es zeigt den Baum von `shop-api.latherit.yaml`, ohne Editorbereich daneben; der Reiter heißt `shop-api`.",
+                            "Erneut wählen: Tool Window verschwindet, Haken im Menü weg.",
+                        ],
+                    },
+                    {
+                        "id": "SB-02", "titel": "Settings-Seite", "tag": "neu in 1.2",
+                        "schritte": [
+                            "*Settings › Tools › LatherIt* öffnen.",
+                            "*Use as sidebar module in this project* an- und ausschalten, jeweils *Apply*.",
+                        ],
+                        "erwartet": [
+                            "Tool Window erscheint bzw. verschwindet sofort, ohne Neustart.",
+                            "Die vier Behavior-Schalter sind nur bei eingeschaltetem Modul bedienbar und zeigen "
+                            "denselben Stand wie das Menü ⋮ › *Behavior* im Tool Window.",
+                        ],
+                    },
+                    {
+                        "id": "SB-03", "titel": "Knopf in der Editor-Ansicht", "tag": "neu in 1.2",
+                        "vorher": "Modul aus, `shop-api.latherit.yaml` im LatherIt-Tab offen.",
+                        "schritte": ["Oben in der Seitenleiste von LatherIt den Knopf *Open as sidebar module* (geteiltes Fenster) klicken."],
+                        "erwartet": [
+                            "Der Editor-Tab schließt sich, das Tool Window geht mit **dieser** Datei auf.",
+                            "Der Knopf erscheint nur in der IDE, nicht in der Desktop-App.",
+                        ],
+                    },
+                    {
+                        "id": "SB-04", "titel": "Zurück zur Editor-Ansicht", "tag": "neu in 1.2",
+                        "schritte": ["Im Tool Window oben rechts *Switch Back to Editor View* klicken."],
+                        "erwartet": ["Modul aus, Tool Window weg, die Projektdatei öffnet sich wie gewohnt im LatherIt-Tab."],
+                    },
+                    {
+                        "id": "SB-05", "titel": "Projektdatei öffnen bei eingeschaltetem Modul", "tag": "neu in 1.2",
+                        "schritte": ["Modul an, im Projektbaum `shop-api.latherit.yaml` doppelklicken."],
+                        "erwartet": [
+                            "Es bleibt kein Editor-Tab der Datei offen (kurzes Aufblitzen ist in Ordnung).",
+                            "Das Tool Window kommt nach vorn und zeigt diese Datei.",
+                        ],
+                    },
+                    {
+                        "id": "SB-06", "titel": "Einstellung bleibt je Projekt", "tag": "neu in 1.2",
+                        "schritte": [
+                            "Modul an, IDE mit ⌘Q beenden und neu starten.",
+                            "Ein anderes Projekt öffnen.",
+                        ],
+                        "erwartet": [
+                            "Im Testprojekt ist das Tool Window wieder da, mit derselben Datei.",
+                            "Im anderen Projekt gibt es kein LatherIt-Tool-Window.",
+                        ],
+                    },
+                ],
+            },
+            {
+                "titel": "Baum und Request-Tabs",
+                "faelle": [
+                    {
+                        "id": "SB-10", "titel": "Öffnen per Doppelklick und Enter", "tag": "neu in 1.2",
+                        "vorher": "Behavior › *Open Files with Single Click* aus.",
+                        "schritte": [
+                            "Einen Request einfach anklicken.",
+                            "Denselben Request doppelklicken.",
+                            "Einen anderen Request mit den Pfeiltasten wählen und Enter drücken.",
+                        ],
+                        "erwartet": [
+                            "Einfacher Klick markiert nur.",
+                            "Doppelklick und Enter öffnen je einen eigenen Editor-Tab mit genau diesem Request "
+                            "(ohne Baum, ohne LatherIt-eigene Tab-Leiste).",
+                        ],
+                    },
+                    {
+                        "id": "SB-11", "titel": "Geschlossenen Tab erneut öffnen", "tag": "neu in 1.2",
+                        "schritte": ["Tab aus SB-10 schließen, im Baum denselben (noch markierten) Request doppelklicken."],
+                        "erwartet": ["Der Tab öffnet sich wieder, ohne vorher woanders hinzuklicken."],
+                    },
+                    {
+                        "id": "SB-12", "titel": "Offener Request kommt nach vorn", "tag": "neu in 1.2",
+                        "schritte": ["Zwei Requests öffnen, im Baum den ersten erneut doppelklicken."],
+                        "erwartet": ["Kein zweiter Tab - der vorhandene kommt nach vorn."],
+                    },
+                    {
+                        "id": "SB-13", "titel": "Tab-Icons je Knotenart", "tag": "neu in 1.2",
+                        "schritte": ["Je einen SOAP-Request, REST-Request, Test Case und Mock öffnen."],
+                        "erwartet": ["Requests mit LatherIt-Icon, Test Case mit Test-Icon, Mock mit eigenem Icon; Titel bei REST mit Methode (`GET …`)."],
+                    },
+                    {
+                        "id": "SB-14", "titel": "Gleichnamige Tabs", "tag": "neu in 1.2",
+                        "schritte": [
+                            "Zwei Requests gleichen Namens (z. B. *Request 1*) unter verschiedenen Operationen öffnen.",
+                            "Mit der Maus über einen Tab fahren.",
+                            "Einen der beiden schließen.",
+                        ],
+                        "erwartet": [
+                            "Solange beide offen sind: `Request 1 — <Operation>`.",
+                            "Tooltip zeigt den ganzen Pfad (`Interface › Operation › Request 1`).",
+                            "Nach dem Schließen heißt der übrige Tab wieder nur `Request 1`.",
+                        ],
+                    },
+                    {
+                        "id": "SB-15", "titel": "Umbenennen im Baum", "tag": "neu in 1.2",
+                        "schritte": [
+                            "Rechtsklick auf einen offenen Request › *Rename*, neuen Namen eingeben.",
+                            "Einen anderen Request markieren, fn+⇧F6 (bzw. das Rename-Kürzel der Keymap).",
+                            "Einen von zwei gleichnamigen Requests (SB-14) umbenennen.",
+                        ],
+                        "erwartet": [
+                            "Umbenennen startet jeweils direkt in der Zeile; fn springt **nicht** ins Filterfeld.",
+                            "Der Tab-Titel zieht nach etwa ½ s nach.",
+                            "Der frühere Zwilling verliert seinen Zusatz.",
+                        ],
+                    },
+                    {
+                        "id": "SB-16", "titel": "Löschen schließt den Tab", "tag": "neu in 1.2",
+                        "schritte": ["Einen offenen Request im Baum über das Papierkorb-Symbol löschen."],
+                        "erwartet": ["Sein Tab schließt sich nach etwa ½ s; andere Tabs bleiben."],
+                    },
+                ],
+            },
+            {
+                "titel": "Behavior (Menü ⋮ im Tool Window)",
+                "faelle": [
+                    {
+                        "id": "SB-20", "titel": "Open Files with Single Click", "tag": "neu in 1.2",
+                        "schritte": ["Einschalten, einen Request einfach anklicken."],
+                        "erwartet": ["Wirkt sofort (ohne Neuöffnen); der Request öffnet sich, der Fokus bleibt im Baum."],
+                    },
+                    {
+                        "id": "SB-21", "titel": "Enable Preview Tab", "tag": "neu in 1.2",
+                        "vorher": "SB-20 an.",
+                        "schritte": ["Vorschau-Tab einschalten, nacheinander drei Requests einfach anklicken, dann einen doppelklicken."],
+                        "erwartet": ["Die Einfachklicks teilen sich einen kursiven Vorschau-Tab; der Doppelklick öffnet einen festen Tab."],
+                    },
+                    {
+                        "id": "SB-22", "titel": "Open Directories with Single Click", "tag": "neu in 1.2",
+                        "schritte": ["Einschalten, eine Operation bzw. Suite einfach anklicken."],
+                        "erwartet": ["Klappt auf bzw. zu; ausgeschaltet nur per Doppelklick oder Pfeil."],
+                    },
+                    {
+                        "id": "SB-23", "titel": "Always Select Opened File", "tag": "neu in 1.2",
+                        "schritte": ["Einschalten, zwei Request-Tabs öffnen, zwischen den Tabs wechseln."],
+                        "erwartet": ["Der Baum markiert jeweils den Request des aktiven Tabs und klappt dorthin auf, ohne etwas zu öffnen."],
+                    },
+                    {
+                        "id": "SB-24", "titel": "Startwerte aus dem Project-Fenster", "tag": "neu in 1.2",
+                        "schritte": [
+                            "In einem Projekt, in dem das Modul noch nie an war: im Project-Fenster ⋮ › *Behavior* › "
+                            "*Open Files with Single Click* setzen.",
+                            "Danach das LatherIt-Modul einschalten.",
+                        ],
+                        "erwartet": ["LatherIt übernimmt den Haken einmalig; spätere Änderungen sind unabhängig voneinander."],
+                    },
+                ],
+            },
+            {
+                "titel": "Mehrere Projektdateien",
+                "faelle": [
+                    {
+                        "id": "SB-30", "titel": "Projektdatei wählen", "tag": "neu in 1.2",
+                        "vorher": "[[datei:projekte/crlf.latherit.yaml]] zusätzlich in den Testordner kopieren.",
+                        "schritte": [
+                            "Im Tool Window oben den Pfeil-Knopf *Choose Project File* klicken.",
+                            "Die zweite Datei wählen; ⌘Q, neu starten.",
+                        ],
+                        "erwartet": [
+                            "Der Knopf ist nur bei mehr als einer Projektdatei sichtbar; die aktuelle ist mit ✓ markiert.",
+                            "Nach der Wahl zeigt das Tool Window die zweite Datei (Reiter mit ihrem Namen).",
+                            "Nach dem Neustart ist die zweite Datei weiter gewählt.",
+                        ],
+                    },
+                ],
+            },
+            {
+                "titel": "Abgleich zwischen den Ansichten",
+                "text": [("p", "Jede Ansicht speichert selbst; die anderen laden bei fremden Änderungen neu. Hier steckt das "
+                               "größte Risiko für verlorene Änderungen.")],
+                "faelle": [
+                    {
+                        "id": "SB-40", "titel": "Änderung bei eingeklapptem Tool Window", "tag": "neu in 1.2",
+                        "schritte": [
+                            "Request-Tab offen, Tool Window einklappen.",
+                            "Im Tab den Namen bzw. Endpunkt ändern, kurz warten.",
+                            "Tool Window wieder aufklappen, im Baum einen **anderen** Request umbenennen.",
+                        ],
+                        "erwartet": [
+                            "Der Baum zeigt nach dem Aufklappen sofort die Änderung aus dem Tab.",
+                            "Die Umbenennung im Baum wird gespeichert, **keine** Meldung „… wurde außerhalb von LatherIt geändert“.",
+                            "In der Datei (Text) stehen beide Änderungen.",
+                        ],
+                    },
+                    {
+                        "id": "SB-41", "titel": "Schnell tippen und sofort wechseln", "tag": "neu in 1.2",
+                        "schritte": [
+                            "Im Body eines Request-Tabs ein Zeichen tippen und **sofort** (unter ½ s) im Baum einen anderen Request umbenennen.",
+                            "Umgekehrt: im Baum umbenennen und sofort im Tab tippen. Ein paar Mal wiederholen.",
+                        ],
+                        "erwartet": ["Beide Änderungen bleiben **immer** erhalten (Datei per Text prüfen)."],
+                    },
+                    {
+                        "id": "SB-42", "titel": "Zwei Request-Tabs nebeneinander", "tag": "neu in 1.2",
+                        "schritte": [
+                            "Zwei Requests öffnen, einen per *Split Right* daneben legen.",
+                            "Links ändern, rechts sofort danach ändern.",
+                        ],
+                        "erwartet": ["Am Ende stehen beide Änderungen in der Datei; nie geht die erste verloren."],
+                    },
+                    {
+                        "id": "SB-43", "titel": "Änderung von außen", "tag": "neu in 1.2",
+                        "schritte": ["Projektdatei per Git-Checkout (wie P-21) auf einen älteren Stand setzen."],
+                        "erwartet": ["Baum und alle offenen Request-Tabs zeigen den älteren Stand; Tabs gelöschter Requests schließen sich."],
+                    },
+                ],
+            },
+            {
+                "titel": "Mocks und Icon",
+                "faelle": [
+                    {
+                        "id": "SB-50", "titel": "Mock aus einem Request-Tab", "tag": "neu in 1.2",
+                        "schritte": [
+                            "Einen Mock-Service als Tab öffnen und dort starten.",
+                            "Eine Anfrage an den Mock schicken (wie M-…), Antwort prüfen.",
+                            "Den Tab schließen, erneut anfragen.",
+                        ],
+                        "erwartet": [
+                            "Der Mock antwortet; im Baum erscheint der Live-Punkt.",
+                            "Nach dem Schließen des Tabs läuft der Mock weiter und antwortet.",
+                        ],
+                    },
+                    {
+                        "id": "SB-51", "titel": "Tool-Window-Icon", "tag": "neu in 1.2",
+                        "schritte": ["Icon in der linken Leiste ansehen: New UI normal, *View › Appearance › Compact Mode*, hell und dunkel."],
+                        "erwartet": ["Scharf und gleich kräftig wie das Project-Icon daneben; aktiv weiß."],
                     },
                 ],
             },

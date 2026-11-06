@@ -1,0 +1,9 @@
+{
+  "icons": {
+    "expui": {
+      "toolwindow": {
+        "latherIt.svg": "icons/toolWindowLatherIt.svg"
+      }
+    }
+  }
+}

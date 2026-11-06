@@ -14,6 +14,7 @@ import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.SystemInfo
@@ -31,6 +32,7 @@ import org.cef.handler.CefContextMenuHandlerAdapter
 import org.cef.handler.CefLifeSpanHandlerAdapter
 import org.cef.browser.CefFrame
 import java.awt.Toolkit
+import java.awt.event.HierarchyEvent
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import javax.swing.JComponent
@@ -42,14 +44,39 @@ import javax.swing.KeyStroke
  * Die Oberfläche ruft `window.__latheritIde.call(befehl, args)` auf, das Plugin führt den Befehl
  * aus ([HostCommands]) und meldet das Ergebnis per `_settle` zurück.
  */
-class LatherItView(private val project: Project, private val file: VirtualFile, parent: Disposable) : Disposable {
+class LatherItView(
+    private val project: Project,
+    private val file: VirtualFile,
+    parent: Disposable,
+    /** `full` (ganze Oberfläche), `nav` (nur Baum, Tool Window) oder `detail` (nur [nodeId]) - siehe src/lib/ide.ts */
+    private val viewMode: String = "full",
+    private val nodeId: String? = null,
+) : Disposable {
     // Seit 2026.x läuft JCEF im Remote-Modus und rendert immer offscreen - setOffScreenRendering(false)
     // würde nur ignoriert (mit Warnung im Log). Das Mausrad glättet die Oberfläche selbst, mit nur passiven
     // Listenern (siehe lib/smoothWheel.ts und lib/monacoWheel.ts im Web-Projekt).
     private val browser = JBCefBrowser.createBuilder().build()
     private val query = JBCefJSQuery.create(browser as JBCefBrowserBase)
-    private val mocks = MockServers(::emit)
-    private val commands = HostCommands(project, file, mocks, reload = ::reloadLater, ready = { loading.stopLoading() })
+    /**
+     * Mocks laufen im Seitenleisten-Modus nur im Baum (Tool Window): Er beantwortet die Anfragen, Request-Tabs
+     * starten und stoppen über ihn. Sonst (und ohne offenen Baum) hat jede Ansicht ihre eigenen.
+     */
+    private val sharedMocks: MockServers? = if (viewMode == "detail") LatherItSidebar.getInstance(project).navView?.mocks else null
+    internal val mocks: MockServers = sharedMocks ?: MockServers(::emit)
+    private val commands = HostCommands(
+        project, file, mocks,
+        reload = ::reloadLater,
+        ready = { loading.stopLoading() },
+        openNode = { node, preview -> LatherItSidebar.openNode(project, file, node, preview) },
+        closeEditor = ::closeEditor,
+    )
+
+    private fun closeEditor() {
+        val manager = FileEditorManager.getInstance(project)
+        if (viewMode != "detail") return manager.closeFile(file)
+        manager.openFiles.filter { it is LatherItNodeFile && it.projectFile == file && it.nodeId == nodeId }
+            .forEach(manager::closeFile)
+    }
 
     /**
      * Ladekreis bis die Oberfläche gezeichnet ist (wie die Markdown-Vorschau) - sonst ist beim Öffnen erst
@@ -77,7 +104,7 @@ class LatherItView(private val project: Project, private val file: VirtualFile, 
         // Nach dem Browser registriert = vor ihm freigegeben
         Disposer.register(this, query)
         // Mocks enden mit dem Tab - vor dem Browser, damit kein Request mehr an ihn geht
-        Disposer.register(this) { mocks.stopAll() }
+        if (sharedMocks == null) Disposer.register(this) { mocks.stopAll() }
 
         query.addHandler { request ->
             onCall(request)
@@ -92,6 +119,14 @@ class LatherItView(private val project: Project, private val file: VirtualFile, 
             .subscribe(LafManagerListener.TOPIC, LafManagerListener { applyTheme() })
         installShortcuts()
         watchDocument()
+        // Wieder sichtbar (Editor-Tab gewählt, Tool Window aufgeklappt): Änderungen von außen übernehmen. Für das
+        // Tool Window gibt es kein selectNotify wie beim Editor - der Baum bliebe sonst veraltet und sein
+        // nächstes Speichern scheiterte am Konflikt.
+        loading.addHierarchyListener { event ->
+            if (event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() != 0L && loading.isShowing) {
+                reloadIfChangedElsewhere()
+            }
+        }
         browser.loadURL(WebResources.START_URL)
         startScreenshots()
     }
@@ -167,6 +202,9 @@ class LatherItView(private val project: Project, private val file: VirtualFile, 
             projectPath: ${gson.toJson(file.path)},
             importFrom: ${gson.toJson(consumeImport())},
             locale: ${gson.toJson(DynamicBundle.getLocale().toLanguageTag())},
+            view: ${gson.toJson(viewMode)},
+            nodeId: ${gson.toJson(nodeId)},
+            sidebar: ${gson.toJson(LatherItSidebar.getInstance(project).clickSettings())},
             call(command, args) {
               return new Promise((resolve, reject) => {
                 const id = nextId++
@@ -255,6 +293,12 @@ class LatherItView(private val project: Project, private val file: VirtualFile, 
         }
         // Formatieren auch mit dem Kürzel der IDE (Reformat Code, ⌥⌘L in der Standard-Keymap) - aus der
         // aktiven Keymap, damit es auch mit VSCode-, Eclipse- oder eigener Belegung passt
+        // Umbenennen mit dem Kürzel der IDE (Rename, ⇧F6 in der Standard-Keymap) - ebenfalls aus der aktiven Keymap
+        val rename = KeymapManager.getInstance().activeKeymap.getShortcuts(IdeActions.ACTION_RENAME)
+        if (rename.isNotEmpty()) {
+            LatherItShortcutAction("rename") { emit("shortcut", it) }
+                .registerCustomShortcutSet(CustomShortcutSet(*rename), browser.component, this)
+        }
         val reformat = KeymapManager.getInstance().activeKeymap.getShortcuts(IdeActions.ACTION_EDITOR_REFORMAT)
         if (reformat.isNotEmpty()) {
             LatherItShortcutAction("format") { emit("shortcut", it) }

@@ -21,6 +21,11 @@ version = providers.gradleProperty("pluginVersion").get()
 
 kotlin {
     jvmToolchain(25)
+    // Keine Brücken-Methoden für Interface-Defaults: Sonst „überschreibt und ruft“ z. B. LatherItToolWindowFactory
+    // jede (auch veraltete) Default-Methode von ToolWindowFactory, und verifyPlugin meldet sie als Nutzung.
+    compilerOptions {
+        jvmDefault.set(org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode.NO_COMPATIBILITY)
+    }
 }
 
 repositories {
@@ -53,6 +58,16 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>1.2.0</h3>
+            <ul>
+              <li>Optional sidebar module, per project: the LatherIt tree as a tool window next to Project, every request,
+                  test and mock in its own editor tab. Turn it on in <i>Settings | Tools | LatherIt</i>, via
+                  <i>Tools | LatherIt as Sidebar Module</i> or with the new button in the LatherIt editor.
+                  Without it everything stays as before.</li>
+              <li>The tool window follows the IDE's <i>Behavior</i> options: preview tab, open files or directories with a
+                  single click, always select the opened file. Tabs with the same name show their parent.</li>
+              <li>Context menu in the tree with Rename; the IDE's Rename shortcut (Shift+F6) works in the tree.</li>
+            </ul>
             <h3>1.1.0</h3>
             <ul>
               <li>English user interface. LatherIt follows the language of the IDE (English or German);

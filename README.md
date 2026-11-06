@@ -20,7 +20,12 @@ Differences from the desktop app:
 - **Saving** happens automatically shortly after every change (like other files in the IDE), through
   the IDE's document, so the change also shows up in the text tab, in Git and in Local History.
 - If the file is changed **outside** (text tab, Git, another program), the UI reloads.
-- **Mock services** belong to the editor tab that started them and end when it is closed.
+- **Mock services** belong to the editor tab that started them and end when it is closed (with the sidebar
+  module: to the tool window).
+- **Sidebar module** (optional, per project): the tree as a tool window next to Project, each request in its
+  own editor tab. *Settings | Tools | LatherIt*, *Tools | LatherIt as Sidebar Module* or the button in the
+  LatherIt editor. The tool window and the tabs each load and save the project file; the others reload after a
+  change, and a view saves at once when it loses focus.
 - **Keyboard shortcuts** taken by the IDE itself are passed on by the plugin: ⌘↵, ⌘S, ⇧⌘S, ⌘I, ⇧⌘N,
   ⌘B, ⇧⌘F, ⌘1, ⌘2.
 
@@ -112,6 +117,8 @@ answers the UI's commands, with the same names, parameters and results. Paths li
 | File | Contents |
 | --- | --- |
 | `LatherItEditorProvider.kt` | Editor tab for `*.latherit.yaml` |
+| `LatherItSidebar.kt` | Sidebar module: setting per project, tool window, a tab per node (`LatherItNodeFile`), tab titles and icons, behavior options |
+| `LatherItConfigurable.kt` | *Settings \| Tools \| LatherIt* |
 | `LatherItView.kt` | JCEF browser, bridge (`window.__latheritIde`), light/dark, keyboard shortcuts, reloading after external changes |
 | `WebResources.kt` | Serves the UI at `https://latherit.ide/` (a real origin for web workers) |
 | `HostCommands.kt` | Commands: files (through the IDE's documents), system, dialogs, clipboard |

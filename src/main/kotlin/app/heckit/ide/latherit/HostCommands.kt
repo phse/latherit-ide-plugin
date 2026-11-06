@@ -18,6 +18,7 @@ import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
@@ -47,6 +48,10 @@ class HostCommands(
     private val reload: () -> Unit = {},
     /** Die Oberfläche ist geladen und gezeichnet (Ladekreis ausblenden). */
     private val ready: () -> Unit = {},
+    /** Seitenleisten-Modus: Knoten als eigenen Editor-Tab öffnen (siehe [LatherItSidebar]). */
+    private val openNode: (node: LatherItSidebar.NodeInfo, preview: Boolean) -> Unit = { _, _ -> },
+    /** ⌘W: den eigenen Editor-Tab schließen (im Seitenleisten-Modus der Request-Tab, nicht die Projektdatei). */
+    private val closeEditor: () -> Unit = { FileEditorManager.getInstance(project).closeFile(file) },
 ) {
     /** Aufgeklappte Knoten und Auswahl im Baum (siehe [LatherItTreeStates]). */
     private val treeStates get() = project.getService(LatherItTreeStates::class.java)
@@ -88,9 +93,18 @@ class HostCommands(
         "new_project" -> onEdt { LatherItProjects.createNew(project, file.parent); null }
         "open_project" -> onEdt { LatherItProjects.chooseAndOpen(project, file.parent); null }
         // ⌘W ohne offenen LatherIt-Tab: wie in der IDE den Editor (das Projekt) schließen
-        "close_editor" -> onEdt { FileEditorManager.getInstance(project).closeFile(file); null }
+        "close_editor" -> onEdt { closeEditor(); null }
+        "input_dialog" -> onEdt {
+            Messages.showInputDialog(project, null, args.string("title"), null, args.optString("value"), null)
+        }
         // ⇧⌘F im LatherIt-Tab: Find in Files der IDE mit dem dort markierten Text
         "ui_ready" -> onEdt { ready(); null }
+        "open_node" -> onEdt { openNode(nodeInfo(args), args.get("preview")?.asBoolean == true); null }
+        "sidebar_nodes" -> onEdt {
+            val nodes = args.getAsJsonArray("nodes")?.map { nodeInfo(it.asJsonObject) }.orEmpty()
+            LatherItSidebar.getInstance(project).syncNodes(file, nodes); null
+        }
+        "sidebar_module_on" -> onEdt { LatherItSidebar.getInstance(project).enableFor(file); null }
         "find_in_files" -> onEdt { findInFiles(args.string("text")); null }
         "open_project_path" -> onEdt { LatherItProjects.openPath(project, args.string("path")); null }
         "import_soapui" -> onEdt { LatherItProjects.importSoapUi(project, file.parent); null }
@@ -227,6 +241,12 @@ class HostCommands(
         }, ModalityState.defaultModalityState())
         return future
     }
+
+    private fun nodeInfo(o: JsonObject) =
+        LatherItSidebar.NodeInfo(
+            o.string("id"), o.string("name"), o.optString("method"), o.optString("kind"),
+            o.getAsJsonArray("path")?.map { it.asString }.orEmpty(),
+        )
 
     private fun JsonObject.string(name: String): String =
         optString(name) ?: throw HostException("Parameter fehlt: $name")
