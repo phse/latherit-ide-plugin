@@ -219,4 +219,11 @@ class HttpBackendTest : BasePlatformTestCase() {
         assertEquals("ä", HttpBackend.decode("ä".toByteArray(), "gibt-es-nicht"))
         assertEquals("", HttpBackend.decode(ByteArray(0), null))
     }
+
+    fun testRoheBytesNurFuerBinaerinhalt() {
+        assertNull(HttpBackend.rawBytes("Größe".toByteArray()))
+        assertNull(HttpBackend.rawBytes(ByteArray(0)))
+        assertEquals("iVBORw==", HttpBackend.rawBytes(byteArrayOf(0x89.toByte(), 'P'.code.toByte(), 'N'.code.toByte(), 'G'.code.toByte())))
+        assertEquals("YQBi", HttpBackend.rawBytes(byteArrayOf('a'.code.toByte(), 0, 'b'.code.toByte())))
+    }
 }

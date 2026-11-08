@@ -5,6 +5,23 @@ name: Shop API
 properties:
   - name: baseUrl
     value: http://localhost:8099/shop
+  - name: customer
+    value: C-1001
+environments:
+  - id: env-local
+    name: Local mock
+    properties:
+      - name: baseUrl
+        value: http://localhost:8099/shop
+      - name: customer
+        value: C-1001
+  - id: env-staging
+    name: Staging
+    properties:
+      - name: baseUrl
+        value: https://staging.example.com/shop
+      - name: customer
+        value: C-2040
 interfaces: []
 restServices:
   - id: rest-shop

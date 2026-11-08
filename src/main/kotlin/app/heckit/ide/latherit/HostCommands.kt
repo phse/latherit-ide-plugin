@@ -107,6 +107,10 @@ class HostCommands(
         "sidebar_module_on" -> onEdt { LatherItSidebar.getInstance(project).enableFor(file); null }
         "find_in_files" -> onEdt { findInFiles(args.string("text")); null }
         "open_project_path" -> onEdt { LatherItProjects.openPath(project, args.string("path")); null }
+        "import_dialog" -> onEdt {
+            val dialog = ImportDefinitionDialog(project)
+            if (dialog.showAndGet()) dialog.result() else null
+        }
         "import_soapui" -> onEdt { LatherItProjects.importSoapUi(project, file.parent); null }
         "mock_start" -> background { mocks.start(args.string("mockId"), args.int("port"), args.get("public")?.asBoolean == true) }
         "mock_stop" -> background { mocks.stop(args.string("mockId")); null }
