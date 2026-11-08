@@ -56,7 +56,8 @@ object ScreenshotMaker {
         // Saubere Ausgangslage (keine Collections, Tabs o. Ä. aus früheren Sandbox-Sitzungen), nebeneinander,
         // dann neu laden, damit die Oberfläche es übernimmt
         waitFor(view, "return !!document.querySelector('#app')")
-        js(view, "localStorage.clear(); localStorage.setItem('latherit.splitOrientation', JSON.stringify('side')); location.reload()")
+        js(view, "localStorage.clear(); localStorage.setItem('latherit.splitOrientation', JSON.stringify('side')); " +
+            "localStorage.setItem('latherit.activeEnvironment', JSON.stringify({ 'demo-project': 'env-local' })); location.reload()")
         Thread.sleep(2000)
         waitFor(view, "$STORES return store('workspace').projects.length > 0")
 
@@ -86,6 +87,12 @@ object ScreenshotMaker {
         js(view, "$STORES store('tests').runCase('case-orders')")
         Thread.sleep(2500)
         shot(frame, view, File(out, "04-tests.png"))
+
+        // Projektübersicht mit Umgebungen
+        select(view, "demo-project")
+        js(view, "document.querySelector('.project-view h2:nth-of-type(2)')?.scrollIntoView({ block: 'start' })")
+        Thread.sleep(600)
+        shot(frame, view, File(out, "06-environments.png"))
 
         js(view, "$STORES store('mocks').stop('mock-shop')")
         sidebarModule(project, frame, view)

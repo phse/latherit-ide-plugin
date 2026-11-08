@@ -25,12 +25,32 @@ Optional, per project and only for you (stored in the workspace, not shared with
 | Tabs | renamed and closed together with their node; tabs with the same name show their parent |
 | Mock services | run in the tool window, also when started from a tab |
 
+## Environments
+
+Defined in the project overview, stored in the project file. The active environment is chosen per computer (not stored in the project file), with the selector next to *Send* or in the overview.
+
+| | |
+| --- | --- |
+| Effect | while active, its properties replace project properties of the same name: `${#Project#baseUrl}` gives the environment's value |
+| New environment | starts with the names and values of the project properties |
+| Tests | transfers and scripts that set an overridden project property write to the active environment |
+
+## Import and cURL
+
+| | |
+| --- | --- |
+| WSDL / OpenAPI | **⌘I** (Ctrl+I), URL or file; recognized by content. OpenAPI 3.x and Swagger 2.0 as JSON or YAML: servers → endpoints, paths → resources, one sample request per operation (body from the example or generated from the schema). Optional query and header parameters start disabled |
+| Login for the import | *Authentication* in the import dialog (Basic, Bearer, Digest, NTLM, placeholders allowed); optionally also set on the imported requests |
+| cURL → request | paste a cURL command into *New REST request* (**⇧⌘N**): method, headers, body, `-u`, query. `-F` (multipart) is not supported and reported |
+| Request → cURL | *Sent* tab of the response, button *cURL* (values after property expansion; authentication only as a comment) |
+| Binary responses | *Show as hex* |
+
 ## Try it in two minutes
 
 1. *File \| New \| LatherIt Project*, enter a name.
 2. In the LatherIt tab press **⇧⌘N** (Ctrl+Shift+N), choose `GET` and enter any URL, e.g. `https://httpbin.org/get?hello=world`.
 3. Press **⌘↵** (Ctrl+Enter) to send. The response shows status, time and size, formatted or raw; the *Sent* tab shows the request as actually sent.
-4. For SOAP: **⌘I** (Ctrl+I) imports a WSDL from a URL or a file and generates sample requests.
+4. **⌘I** (Ctrl+I) imports a WSDL or an OpenAPI/Swagger file from a URL or a file and generates sample requests.
 
 ## Keyboard shortcuts
 
@@ -40,7 +60,7 @@ In the LatherIt tab these go to LatherIt, even where the IDE uses them itself. O
 | --- | --- |
 | ⌘↵ | Send request, run test or load test, start or stop mock |
 | ⇧⌘N | New REST request |
-| ⌘I | Import WSDL |
+| ⌘I | Import WSDL / OpenAPI |
 | ⌘B | Put request on the Board or remove it |
 | ⌃1 … ⌃9 (Windows/Linux: Alt+1 … 9) | Open Board entry |
 | ⌘P | Go to request, test or mock in all open LatherIt projects |

@@ -14,8 +14,14 @@
 <h3>Features</h3>
 <ul>
   <li>Import WSDLs, generate sample requests, send them and inspect the response.</li>
-  <li>REST requests with query, path, matrix and header parameters.</li>
+  <li>Import OpenAPI/Swagger (JSON or YAML) as REST services with parameters and sample bodies - also from URLs
+      that need a login.</li>
+  <li>REST requests with query, path, matrix and header parameters; paste a cURL command to create one, copy any
+      sent request as cURL.</li>
+  <li>Environments (e.g. dev, staging, live) that override project properties; the active one is chosen per
+      computer, not stored in the project file.</li>
   <li>Test suites with assertions, property transfers and scripts (JavaScript).</li>
+  <li>Hex view for binary responses.</li>
   <li>Mock services for SOAP and REST, running inside the IDE while the editor tab is open.</li>
   <li>Authentication: Basic, Bearer, Digest and NTLM.</li>
   <li>Property expansion like SoapUI (<code>${#Project#name}</code>, <code>${#Env#NAME}</code>, inline scripts).</li>

@@ -48,6 +48,8 @@ class HttpResponseData(
     val body: String,
     val timeMs: Long,
     val size: Int,
+    /** Rohe Bytes (Base64, höchstens [HttpBackend.RAW_LIMIT]) für die Hex-Ansicht - nur, wenn der Body kein Text ist. */
+    val bodyBase64: String? = null,
 )
 
 /**
@@ -140,6 +142,7 @@ object HttpBackend {
             body = decode(bytes, charset(response)),
             timeMs = timeMs,
             size = bytes.size,
+            bodyBase64 = rawBytes(bytes),
         )
     }
 
@@ -192,6 +195,21 @@ object HttpBackend {
                 .getOrDefault(bytes)
             else -> bytes
         }
+    }
+
+    /** Höchstens so viele Bytes gehen roh an die Oberfläche (Hex-Ansicht). */
+    const val RAW_LIMIT = 2 * 1024 * 1024
+
+    /** Rohe Bytes für die Hex-Ansicht, wenn sie kein UTF-8-Text sind (oder Nullbytes enthalten). */
+    fun rawBytes(bytes: ByteArray): String? {
+        if (bytes.isEmpty()) return null
+        val text = bytes.none { it == 0.toByte() } && runCatching {
+            Charsets.UTF_8.newDecoder()
+                .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+                .decode(java.nio.ByteBuffer.wrap(bytes))
+        }.isSuccess
+        return if (text) null else java.util.Base64.getEncoder().encodeToString(bytes.copyOf(minOf(bytes.size, RAW_LIMIT)))
     }
 
     /** Bytes in Text umwandeln: BOM hat Vorrang, dann der Charset-Header, sonst UTF-8. */

@@ -58,6 +58,21 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>1.3.0</h3>
+            <ul>
+              <li><b>OpenAPI/Swagger import</b>: <i>Import WSDL / OpenAPI</i> (Cmd+I / Ctrl+I) reads OpenAPI 3.x and
+                  Swagger 2.0 as JSON or YAML from a URL or file - servers, paths, parameters and a sample request
+                  per operation, the body from the example or generated from the schema.</li>
+              <li>The import can log in (Basic, Bearer, Digest, NTLM) for specifications behind a login and use the
+                  same authentication for the imported requests. In the sidebar module the import is an IDE dialog.</li>
+              <li><b>Environments</b> (project overview): values replace project properties of the same name while the
+                  environment is active; switch next to <i>Send</i>. The active environment is remembered per computer.</li>
+              <li><b>cURL</b>: paste a cURL command into <i>New REST request</i> (e.g. "Copy as cURL" from the browser),
+                  or copy a sent request as cURL from the <i>Sent</i> tab.</li>
+              <li><b>Hex view</b> for binary responses.</li>
+              <li>Certificate errors explain what to do: expired certificates (choose the server certificate in the
+                  IDE dialog) and wrong host names.</li>
+            </ul>
             <h3>1.2.1</h3>
             <ul>
               <li>Sidebar module: opening a request tab no longer stops running mock services.</li>
