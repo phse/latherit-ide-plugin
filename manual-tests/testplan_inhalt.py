@@ -1521,9 +1521,11 @@ KAPITEL = [
                 ["IntelliJ IDEA (macOS)", "RT-01 … RT-08", "IDE-01 … IDE-04"],
                 ["PyCharm, WebStorm, GoLand", "RT-01 … RT-08", "IDE-03"],
                 ["Älteste unterstützte Version (2026.2.0)", "RT-01 … RT-08", "IDE-05"],
-                ["Desktop-App (Windows, Linux, macOS)", "DT-01 … DT-08", "-"],
+                ["Desktop-App (Windows, Linux, macOS)", "DT-01 … DT-13", "-"],
             ]),
-            ("p", "Testbuilds der Desktop-App liegen nach `npm run release:cross` unter `src-tauri/target/cross/` "
+            ("p", "Veröffentlichte Versionen der Desktop-App gibt es unter `https://latherit.heckit.app/download/windows` bzw. "
+                  "`…/download/linux-deb`, `…/download/linux-rpm`, `…/download/linux` (AppImage). "
+                  "Testbuilds der Desktop-App liegen nach `npm run release:cross` unter `src-tauri/target/cross/` "
                   "(Windows: `…-setup.exe`, Linux: `.AppImage`, `.deb`, `.rpm`). Windows 11 ARM und Ubuntu ARM (UTM mit "
                   "Rosetta) führen die x64-Pakete aus."),
         ],
@@ -1623,7 +1625,7 @@ KAPITEL = [
                         ],
                     },
                     {
-                        "id": "DT-04", "titel": "HTTPS mit eigenem Zertifikat", "tag": "geändert 26.10.",
+                        "id": "DT-04", "titel": "HTTPS mit eigenem Zertifikat", "tag": "geändert in 1.1",
                         "ziel": "Die Desktop-App fragt nicht nach (anders als die IDE), sondern prüft gegen die "
                                 "vertrauenswürdigen Zertifikate des Systems - wie ein Browser.",
                         "vorher": "Testserver wie in DT-03.",
@@ -1639,7 +1641,10 @@ KAPITEL = [
                             "LatherIt beenden und neu starten, den Request erneut senden.",
                         ],
                         "erwartet": [
-                            "Erster Versuch: verständliche Fehlermeldung (Zertifikat nicht vertrauenswürdig), kein Absturz.",
+                            "Erster Versuch: Fehlermeldung beginnt mit „Das Server-Zertifikat ist nicht vertrauenswürdig …“ "
+                            "(englisch: „The server certificate is not trusted …“), darunter die Abhilfe für dieses System "
+                            "(Windows: „Vertrauenswürdige Stammzertifizierungsstellen“, Linux: `update-ca-certificates`), "
+                            "darunter „Technische Meldung:“ mit `invalid peer certificate: UnknownIssuer`. Kein Absturz.",
                             "Nach dem Eintragen und Neustart: Status 200.",
                         ],
                     },
@@ -1686,6 +1691,75 @@ KAPITEL = [
                         "erwartet": [
                             "Nachfrage zum Speichern erscheint, danach schließt die App vollständig (kein Prozess bleibt im Task-Manager bzw. `ps`).",
                             "Deinstallation ohne Fehler, Startmenü-Eintrag weg; die Projektdateien bleiben erhalten.",
+                        ],
+                    },
+                    {
+                        "id": "DT-09", "titel": "Update von 1.0.1", "tag": "neu in 1.1",
+                        "vorher": "LatherIt 1.0.1 ist installiert (aus einem früheren Rauchtest), unter Linux als AppImage - nur das aktualisiert sich selbst, `.deb`/`.rpm` werden neu installiert. Sonst den Fall überspringen.",
+                        "schritte": [
+                            "LatherIt 1.0.1 starten; erlaubt die App die Suche nach Updates nicht, in den Einstellungen einschalten.",
+                            "Dem Hinweis auf die neue Version folgen und installieren lassen.",
+                        ],
+                        "erwartet": [
+                            "Hinweis auf 1.1.0 mit „Englische Oberfläche, OpenAPI-Import, Umgebungen, cURL, Hex-Ansicht“.",
+                            "Nach dem Neustart zeigen die Einstellungen Version 1.1.0; das zuletzt offene Projekt ist wieder da.",
+                        ],
+                    },
+                    {
+                        "id": "DT-10", "titel": "Englische Oberfläche", "tag": "neu in 1.1",
+                        "schritte": [
+                            "Einstellungen öffnen (Strg+,), *Sprache* auf *English* stellen.",
+                            "Einen Request senden, Kontextmenü im Baum öffnen, Strg+I (Import-Dialog), dann zurück auf *Automatisch*.",
+                        ],
+                        "erwartet": [
+                            "Alle Texte sofort englisch (Menüs, Dialoge, Statuszeile), keine deutschen Reste; Datum und Größen im englischen Format.",
+                            "*Automatisch* folgt der Systemsprache (Windows-VM: Deutsch).",
+                        ],
+                    },
+                    {
+                        "id": "DT-11", "titel": "OpenAPI-Import mit Anmeldung", "tag": "neu in 1.1",
+                        "vorher": "Testserver wie in DT-03, Projekt aus DT-02 offen.",
+                        "schritte": [
+                            ("Strg+I, Adresse eingeben, *Importieren* (ohne Anmeldung):", "http://192.168.64.1:8088/auth/openapi.json"),
+                            "Strg+I erneut, dieselbe Adresse, *Anmeldung* aufklappen, *Basic*, Benutzer `anna`, Passwort `geheim`, "
+                            "Häkchen „Auch für die importierten Requests verwenden“ lassen, *Importieren*.",
+                            "Im Baum *Shop API (Testserver) › /orders/{id} › getOrder › Request 1* wählen, Strg+Enter.",
+                        ],
+                        "erwartet": [
+                            "Ohne Anmeldung: Meldung „… lieferte HTTP 401 …“, nichts importiert.",
+                            "Mit Anmeldung: REST-Service mit `/orders` (listOrders, createOrder) und `/orders/{id}` (getOrder); "
+                            "Endpunkt `http://192.168.64.1:8088/api`; createOrder hat einen JSON-Body mit `customer` und `items`.",
+                            "getOrder: Status 200 mit `\"id\": \"4711\"`.",
+                        ],
+                    },
+                    {
+                        "id": "DT-12", "titel": "cURL und Umgebungen", "tag": "neu in 1.1",
+                        "vorher": "Testserver wie in DT-03.",
+                        "schritte": [
+                            ("Strg+Umschalt+N, diesen Befehl einfügen, *Anlegen*, Strg+Enter:",
+                             "curl -u anna:geheim -H 'X-Test: 1' http://192.168.64.1:8088/auth/basic"),
+                            "Im Antwortbereich Reiter *Gesendet*, Knopf *cURL*; in ein Terminal der VM einfügen und ausführen "
+                            "(Windows: `curl.exe` statt `curl`, Zeilen mit `\\` vorher zu einer Zeile zusammenfügen).",
+                            "Projektübersicht (Projekt im Baum anklicken): *Umgebung hinzufügen*, Name `VM`, Property `baseUrl` = "
+                            "`http://192.168.64.1:8088/api`, *Aktivieren*. Einen Request mit Endpunkt `${#Project#baseUrl}` senden, "
+                            "dann neben *Senden* auf *Keine Umgebung* stellen und erneut senden.",
+                        ],
+                        "erwartet": [
+                            "Dialog zeigt „cURL erkannt: GET http://192.168.64.1:8088/auth/basic · 1 Header · Basic Auth“; Status 200 mit `\"verfahren\": \"Basic\"`.",
+                            "Der kopierte Befehl liefert im Terminal 401 (die Anmeldung steht nur als Kommentar darunter) - mit `-u anna:geheim` ergänzt 200.",
+                            "Mit Umgebung VM geht der Request an den Testserver; ohne Umgebung gilt der Projektwert bzw. die Meldung „Nicht aufgelöst“.",
+                        ],
+                    },
+                    {
+                        "id": "DT-13", "titel": "Hex-Ansicht", "tag": "neu in 1.1",
+                        "vorher": "Testserver wie in DT-03.",
+                        "schritte": [
+                            ("Strg+Umschalt+N, GET, Adresse eingeben, *Anlegen*, Strg+Enter:", "http://192.168.64.1:8088/http/binary"),
+                            "*Als Hex zeigen*, dann *Zurück zum Hinweis*.",
+                        ],
+                        "erwartet": [
+                            "Hinweis „Binärinhalt (application/octet-stream), 1.024 Bytes“ mit den Knöpfen *Als Hex zeigen* und *Trotzdem als Text zeigen*.",
+                            "Hex: erste Zeile `00000000  00 01 02 03 04 05 06 07  08 09 0a 0b 0c 0d 0e 0f  |................|`, Knopf darüber gut lesbar.",
                         ],
                     },
                 ],
