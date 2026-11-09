@@ -29,6 +29,26 @@ from urllib.parse import parse_qs, unquote, urlsplit
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 BASIC_USER, BASIC_PASSWORD = "anna", "geheim"
+OPENAPI = {
+    "openapi": "3.0.3",
+    "info": {"title": "Shop API (Testserver)"},
+    "servers": [{"url": "/api"}],
+    "paths": {
+        "/orders": {
+            "get": {"operationId": "listOrders", "parameters": [
+                {"name": "status", "in": "query", "schema": {"type": "string", "enum": ["open", "shipped"]}}]},
+            "post": {"operationId": "createOrder", "requestBody": {"content": {"application/json": {
+                "schema": {"$ref": "#/components/schemas/Order"}}}}},
+        },
+        "/orders/{id}": {"get": {"operationId": "getOrder", "parameters": [
+            {"name": "id", "in": "path", "required": True, "schema": {"type": "string", "example": "4711"}}]}},
+    },
+    "components": {"schemas": {"Order": {"type": "object", "properties": {
+        "customer": {"type": "string", "example": "C-1007"},
+        "items": {"type": "array", "items": {"type": "object", "properties": {
+            "sku": {"type": "string", "example": "TEA-GREEN-100"}, "quantity": {"type": "integer", "example": 2}}}},
+    }}}},
+}
 BEARER_TOKEN = "test-token-123"
 DIGEST_REALM = "LatherIt-Test"
 
@@ -61,7 +81,7 @@ INDEX = """<!doctype html><meta charset="utf-8"><title>LatherIt-Testserver</titl
 <li><code>/http/big?mb=5&amp;format=xml|json</code>, <code>/http/headers</code>, <code>/http/gzip</code>, <code>/http/empty</code>,
 <code>/http/html</code>, <code>/http/binary</code>, <code>/http/abbruch</code></li></ul>
 <h2>Anmeldung</h2><ul>
-<li><code>/auth/basic</code> anna / geheim</li><li><code>/auth/bearer</code> Token test-token-123</li>
+<li><code>/auth/basic</code> anna / geheim</li><li><code>/auth/openapi.json</code> OpenAPI-Spezifikation, anna / geheim</li><li><code>/auth/bearer</code> Token test-token-123</li>
 <li><code>/auth/digest</code> anna / geheim</li><li><code>/auth/ntlm</code> beliebiger Benutzer (prüft nur den Ablauf)</li>
 <li><code>/auth/alle</code> 401 mit Basic, Digest und NTLM zur Auswahl</li></ul>
 <h2>GraphQL</h2><ul><li><code>POST /graphql</code>, <code>GET /graphql?query=…</code></li></ul>
@@ -318,6 +338,12 @@ class Handler(BaseHTTPRequestHandler):
             if header == expected:
                 return self.json(200, {"ok": True, "verfahren": "Basic", "benutzer": BASIC_USER})
             return self.reply(401, "Basic: anna / geheim\n", headers=[("WWW-Authenticate", f'Basic realm="{DIGEST_REALM}"')])
+        if kind == "openapi.json":
+            # OpenAPI-Spezifikation nur mit Anmeldung (anna / geheim) - für den Import mit Anmeldung
+            expected = "Basic " + base64.b64encode(f"{BASIC_USER}:{BASIC_PASSWORD}".encode()).decode()
+            if header != expected:
+                return self.reply(401, "Basic: anna / geheim\n", headers=[("WWW-Authenticate", f'Basic realm="{DIGEST_REALM}"')])
+            return self.json(200, OPENAPI)
         if kind == "bearer":
             if header == f"Bearer {BEARER_TOKEN}":
                 return self.json(200, {"ok": True, "verfahren": "Bearer"})
