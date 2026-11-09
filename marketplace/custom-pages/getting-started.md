@@ -20,7 +20,7 @@ Optional, per project and only for you (stored in the workspace, not shared with
 | Turn on | *Settings \| Tools \| LatherIt*, *Tools \| LatherIt as Sidebar Module*, or the button next to the tree in the LatherIt editor |
 | Turn off | *Switch Back to Editor View* in the tool window title, or the same switches |
 | Project file | the first `*.latherit.yaml` in the project; with several, choose in the tool window title. Opening a project file shows it in the tool window |
-| Open a node | double-click or Enter (single click with *Open Files with Single Click*) |
+| Open a node | double-click or Enter (single click with *Open Files with Single Click*); nodes with children (project, services, suites, mocks): Enter or *Open* in the context menu, the project also by double-click |
 | Behavior (⋮ in the tool window) | *Enable Preview Tab*, *Open Files with Single Click*, *Open Directories with Single Click*, *Always Select Opened File*. Initially taken from the Project tool window, then independent; *Enable Preview Tab* is the IDE-wide setting and stays shared |
 | Tabs | renamed and closed together with their node; tabs with the same name show their parent |
 | Mock services | run in the tool window, also when started from a tab |

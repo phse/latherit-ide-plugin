@@ -58,6 +58,11 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>1.3.1</h3>
+            <ul>
+              <li>Sidebar module: double-click the project in the tree to open its overview (environments, properties,
+                  authentication); <i>Open</i> in the tree's context menu opens any node, also services, suites and mocks.</li>
+            </ul>
             <h3>1.3.0</h3>
             <ul>
               <li><b>OpenAPI/Swagger import</b>: <i>Import WSDL / OpenAPI</i> (Cmd+I / Ctrl+I) reads OpenAPI 3.x and
